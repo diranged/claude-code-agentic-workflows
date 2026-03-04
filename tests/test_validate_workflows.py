@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -14,6 +15,7 @@ class TestValidateWorkflows(unittest.TestCase):
             ["bash", SCRIPT, directory],
             capture_output=True,
             text=True,
+            env={**os.environ, "PYTHON": sys.executable},
         )
 
     def test_valid_yaml(self):

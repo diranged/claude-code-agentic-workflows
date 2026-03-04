@@ -42,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-intent
     if: needs.detect-intent.outputs.should_run == 'true'
+    permissions:
+      issues: write
     outputs:
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
     steps:
@@ -64,12 +66,11 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           BODY="<!-- claude-tracking-comment -->
+## Status: Initializing
 
-          ## Status: Initializing
+**Run:** [View workflow run](${RUN_URL})
 
-          **Run:** [View workflow run](${RUN_URL})
-
-          Claude is initializing..."
+Claude is initializing..."
 
           COMMENT_ID=$(gh api \
             --method POST \

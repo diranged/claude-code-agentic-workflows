@@ -1,13 +1,9 @@
 name: "Test: Claude Respond"
 
 on:
-  # Production triggers — only fire from default branch
-  issue_comment:
-    types: [created]
+  # PR comment triggers — issue comments are handled by claude-issue.yml
   pull_request_review_comment:
     types: [created]
-  issues:
-    types: [opened, assigned]
 
   # Dev trigger — works from any branch: gh workflow run "Test: Claude Respond" --ref <branch>
   workflow_dispatch:

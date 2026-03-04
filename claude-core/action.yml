@@ -99,17 +99,7 @@ runs:
     - name: Resolve GitHub Token
       id: resolve-token
       shell: bash
-      run: |
-        if [ -n "$APP_TOKEN" ]; then
-          echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
-          echo "::notice::Using GitHub App token for authentication"
-        elif [ -n "$EXPLICIT_TOKEN" ]; then
-          echo "token=$EXPLICIT_TOKEN" >> "$GITHUB_OUTPUT"
-          echo "::notice::Using explicitly provided github_token"
-        else
-          echo "token=" >> "$GITHUB_OUTPUT"
-          echo "::notice::No explicit GitHub token — upstream action will use default GITHUB_TOKEN"
-        fi
+      run: ${{ github.action_path }}/scripts/resolve_token.sh
       env:
         APP_TOKEN: ${{ steps.app-token.outputs.token }}
         EXPLICIT_TOKEN: ${{ inputs.github_token }}
@@ -117,17 +107,7 @@ runs:
     # Step 3: Validate Claude auth
     - name: Validate Claude Authentication
       shell: bash
-      run: |
-        if [ -z "$OAUTH_TOKEN" ] && [ -z "$API_KEY" ]; then
-          echo "::error::No Claude authentication provided. Set either 'claude_code_oauth_token' (recommended) or 'anthropic_api_key'."
-          exit 1
-        fi
-
-        if [ -n "$OAUTH_TOKEN" ]; then
-          echo "::notice::Using Claude Code OAuth token (subscription billing)"
-        else
-          echo "::notice::Using Anthropic API key (per-token billing)"
-        fi
+      run: ${{ github.action_path }}/scripts/validate_claude_auth.sh
       env:
         OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
         API_KEY: ${{ inputs.anthropic_api_key }}
@@ -136,36 +116,7 @@ runs:
     - name: Build Claude Args
       id: build-args
       shell: bash
-      run: |
-        ARGS=""
-
-        if [ -n "$MODEL" ]; then
-          ARGS="$ARGS --model $MODEL"
-        fi
-
-        if [ -n "$MAX_TURNS" ]; then
-          ARGS="$ARGS --max-turns $MAX_TURNS"
-        fi
-
-        if [ -n "$ALLOWED_TOOLS" ]; then
-          ARGS="$ARGS --allowedTools $ALLOWED_TOOLS"
-        fi
-
-        if [ -n "$DISALLOWED_TOOLS" ]; then
-          ARGS="$ARGS --disallowedTools $DISALLOWED_TOOLS"
-        fi
-
-        # Append any additional raw claude_args
-        if [ -n "$EXTRA_ARGS" ]; then
-          ARGS="$ARGS $EXTRA_ARGS"
-        fi
-
-        # Always append --verbose for full turn-by-turn JSON output
-        ARGS="$ARGS --verbose"
-
-        echo "args<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$ARGS" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
+      run: ${{ github.action_path }}/scripts/build_claude_args.sh
       env:
         MODEL: ${{ inputs.model }}
         MAX_TURNS: ${{ inputs.max_turns }}
@@ -177,15 +128,7 @@ runs:
     - name: Build Prompt
       id: build-prompt
       shell: bash
-      run: |
-        PROMPT=""
-        if [ -n "$PROMPT_TEXT" ]; then
-          PROMPT="$PROMPT_TEXT"
-        fi
-
-        echo "prompt<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$PROMPT" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
+      run: ${{ github.action_path }}/scripts/build_prompt.sh
       env:
         PROMPT_TEXT: ${{ inputs.prompt }}
 

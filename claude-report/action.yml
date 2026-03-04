@@ -73,20 +73,28 @@ runs:
         # Format cost
         COST_FMT=$(awk -v c="$COST" 'BEGIN { printf "$%.4f", c }')
 
-        # Sum token usage across all turns
-        INPUT_TOKENS=$(jq '[.[] | .usage.input_tokens // 0] | add' "$EXEC_FILE")
-        OUTPUT_TOKENS=$(jq '[.[] | .usage.output_tokens // 0] | add' "$EXEC_FILE")
-        CACHE_READ=$(jq '[.[] | .usage.cache_read_input_tokens // 0] | add' "$EXEC_FILE")
-        CACHE_CREATE=$(jq '[.[] | .usage.cache_creation_input_tokens // 0] | add' "$EXEC_FILE")
-
         # Format numbers with commas
         fmt() { printf "%'d" "$1" 2>/dev/null || echo "$1"; }
 
-        # Detect model from the system init turn
-        MODEL=$(jq -r '[.[] | select(.model != null) | .model][0] // "unknown"' "$EXEC_FILE")
-
         # Only show cost row when using API key billing (cost > 0)
         SHOW_COST=$(awk -v c="$COST" 'BEGIN { print (c + 0 > 0) ? "true" : "false" }')
+
+        # Build per-model token usage table via jq
+        MODEL_TABLE=$(jq -r '
+          [ .[] | select(.model != null and .usage != null) |
+            { model, input: (.usage.input_tokens // 0),
+              output: (.usage.output_tokens // 0),
+              cache_read: (.usage.cache_read_input_tokens // 0),
+              cache_create: (.usage.cache_creation_input_tokens // 0) } ]
+          | group_by(.model)
+          | map({
+              model: .[0].model,
+              input: (map(.input) | add),
+              output: (map(.output) | add),
+              cache_read: (map(.cache_read) | add),
+              cache_create: (map(.cache_create) | add) })
+          | .[] | "\(.model)|\(.input)|\(.output)|\(.cache_read)|\(.cache_create)"
+        ' "$EXEC_FILE" 2>/dev/null)
 
         # Write summary (prepended before the verbose report)
         {
@@ -100,12 +108,19 @@ runs:
           if [ "$SHOW_COST" = "true" ]; then
             echo "| Cost | $COST_FMT |"
           fi
-          echo "| Input tokens | $(fmt "${INPUT_TOKENS:-0}") |"
-          echo "| Output tokens | $(fmt "${OUTPUT_TOKENS:-0}") |"
-          echo "| Cache read | $(fmt "${CACHE_READ:-0}") |"
-          echo "| Cache creation | $(fmt "${CACHE_CREATE:-0}") |"
-          echo "| Model | $MODEL |"
           echo "| Session ID | \`$SESSION_ID\` |"
+          echo ""
+          echo "### Token Usage by Model"
+          echo ""
+          echo "| Model | Input | Output | Cache Read | Cache Create |"
+          echo "|-------|------:|-------:|-----------:|-------------:|"
+          if [ -n "$MODEL_TABLE" ]; then
+            while IFS='|' read -r model input output cache_read cache_create; do
+              echo "| $model | $(fmt "$input") | $(fmt "$output") | $(fmt "$cache_read") | $(fmt "$cache_create") |"
+            done <<< "$MODEL_TABLE"
+          else
+            echo "| _unknown_ | 0 | 0 | 0 | 0 |"
+          fi
           echo ""
         } >> "$GITHUB_STEP_SUMMARY"
       env:

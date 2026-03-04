@@ -21,7 +21,7 @@ jobs:
   # Event-driven: @claude mentions in issues/PRs
   claude-respond:
     if: github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: diranged-claude-code
     permissions:
       contents: read
       issues: write
@@ -39,7 +39,7 @@ jobs:
   # Manual dispatch: test from any branch without issues
   claude-respond-dispatch:
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: diranged-claude-code
     permissions:
       contents: read
       issues: write

@@ -68,10 +68,10 @@ runs:
         NUM_TURNS=$(echo "$RESULT" | jq -r '.num_turns // "?"')
 
         # Format duration
-        DURATION=$(awk "BEGIN { printf \"%.1fs\", $DURATION_MS / 1000 }")
+        DURATION=$(awk -v ms="$DURATION_MS" 'BEGIN { printf "%.1fs", ms / 1000 }')
 
         # Format cost
-        COST_FMT=$(awk "BEGIN { printf \"\\$%.4f\", $COST }")
+        COST_FMT=$(awk -v c="$COST" 'BEGIN { printf "$%.4f", c }')
 
         # Sum token usage across all turns
         INPUT_TOKENS=$(jq '[.[] | .usage.input_tokens // 0] | add' "$EXEC_FILE")

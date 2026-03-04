@@ -1,0 +1,45 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "sess-multi456"
+  },
+  {
+    "type": "assistant",
+    "model": "claude-sonnet-4-20250514",
+    "usage": {
+      "input_tokens": 10000,
+      "output_tokens": 2000,
+      "cache_read_input_tokens": 5000,
+      "cache_creation_input_tokens": 1000
+    }
+  },
+  {
+    "type": "assistant",
+    "model": "claude-haiku-4-5-20251001",
+    "usage": {
+      "input_tokens": 3000,
+      "output_tokens": 800,
+      "cache_read_input_tokens": 1500,
+      "cache_creation_input_tokens": 200
+    }
+  },
+  {
+    "type": "assistant",
+    "model": "claude-sonnet-4-20250514",
+    "usage": {
+      "input_tokens": 12000,
+      "output_tokens": 3500,
+      "cache_read_input_tokens": 7000,
+      "cache_creation_input_tokens": 0
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "duration_ms": 62000,
+    "num_turns": 8,
+    "total_cost_usd": 0,
+    "session_id": "sess-multi456"
+  }
+]

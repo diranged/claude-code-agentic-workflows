@@ -1,0 +1,42 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "sess-abc123",
+    "tools": ["Read", "Write", "Bash"]
+  },
+  {
+    "type": "assistant",
+    "model": "claude-sonnet-4-20250514",
+    "usage": {
+      "input_tokens": 15000,
+      "output_tokens": 3200,
+      "cache_read_input_tokens": 8000,
+      "cache_creation_input_tokens": 2000
+    },
+    "message": {
+      "content": "I'll help you with that."
+    }
+  },
+  {
+    "type": "assistant",
+    "model": "claude-sonnet-4-20250514",
+    "usage": {
+      "input_tokens": 18000,
+      "output_tokens": 4500,
+      "cache_read_input_tokens": 12000,
+      "cache_creation_input_tokens": 500
+    },
+    "message": {
+      "content": "Done."
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "duration_ms": 45200,
+    "num_turns": 5,
+    "total_cost_usd": 0,
+    "session_id": "sess-abc123"
+  }
+]

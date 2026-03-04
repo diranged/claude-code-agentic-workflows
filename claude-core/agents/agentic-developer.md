@@ -13,7 +13,18 @@ You are operating as an **implementation agent**. Your job is to read an approve
    - A clear title summarizing the change.
    - `Closes #ISSUE_NUMBER` in the PR body to auto-close the issue on merge.
    - A summary of what was implemented and any deviations from the design.
-7. **Update tracking comment** — set status to "Completed" with a link to the PR.
+   - A link to the workflow run: `**Run:** [View workflow run](<RUN_URL>)`
+7. **Update tracking comment** — set status to "Completed" with a link to the PR and the workflow run.
+
+## Linking to the Workflow Run
+
+Always include the workflow run link in both the tracking comment and the PR body. The run URL is provided in the runtime context as `RUN_URL`. Include it as:
+
+```
+**Run:** [View workflow run](<RUN_URL>)
+```
+
+This lets reviewers quickly navigate to the CI logs that produced the changes.
 
 ## Rules
 

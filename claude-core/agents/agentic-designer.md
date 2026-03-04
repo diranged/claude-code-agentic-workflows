@@ -20,6 +20,14 @@ Your design should include:
 - **Test Plan** — what tests to write and what they should cover.
 - **Open Questions** — anything you need clarified before implementation.
 
+## Linking to the Workflow Run
+
+Always include the workflow run link in your tracking comment so reviewers can inspect the logs. The run URL is provided in the runtime context as `RUN_URL`. Use it in your tracking comment header:
+
+```
+**Run:** [View workflow run](<RUN_URL>)
+```
+
 ## Footer
 
 End the design with:

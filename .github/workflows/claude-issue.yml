@@ -1,0 +1,100 @@
+name: "Claude Issue Agent"
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [assigned]
+
+jobs:
+  # Job 1: Determine if we should run and which agent to use
+  detect-intent:
+    runs-on: ubuntu-latest
+    if: >-
+      !github.event.issue.pull_request
+      && (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+        || (github.event_name == 'issues' && github.event.action == 'assigned')
+      )
+    outputs:
+      should_run: ${{ steps.detect.outputs.should_run }}
+      agent: ${{ steps.detect.outputs.agent }}
+      issue_number: ${{ steps.detect.outputs.issue_number }}
+    steps:
+      - name: Detect intent
+        id: detect
+        run: |
+          echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+
+          BODY="${{ github.event.comment.body || '' }}"
+
+          if [[ "$BODY" == *"@claude implement"* ]]; then
+            echo "agent=agentic-developer" >> "$GITHUB_OUTPUT"
+          else
+            echo "agent=agentic-designer" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  # Job 2: React to the trigger and create a tracking comment
+  setup:
+    runs-on: ubuntu-latest
+    needs: detect-intent
+    if: needs.detect-intent.outputs.should_run == 'true'
+    outputs:
+      comment_id: ${{ steps.create-comment.outputs.comment_id }}
+    steps:
+      - name: Add reaction to triggering comment
+        if: github.event_name == 'issue_comment'
+        run: |
+          gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content='rocket'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+
+      - name: Create tracking comment
+        id: create-comment
+        run: |
+          COMMENT_ID=$(gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/${{ needs.detect-intent.outputs.issue_number }}/comments" \
+            -f body="$(cat <<'EOF'
+          <!-- claude-tracking-comment -->
+
+          ## Status: Initializing
+
+          **Run:** [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          Claude is initializing...
+          EOF
+          )" \
+            --jq '.id')
+          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+
+  # Job 3: Run Claude with composed prompt
+  claude-run:
+    runs-on: diranged-claude-code
+    needs: [detect-intent, setup]
+    if: needs.detect-intent.outputs.should_run == 'true'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Claude
+        uses: ./claude-respond
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          compose_prompt: "true"
+          agent_name: ${{ needs.detect-intent.outputs.agent }}
+          issue_comment_id: ${{ needs.setup.outputs.comment_id }}

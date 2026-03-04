@@ -67,6 +67,19 @@ inputs:
   prompt:
     description: "Text to send to Claude as the prompt. Replaces append_system_prompt."
     required: false
+
+  # Compose prompt configuration
+  agent_name:
+    description: "Agent to load from agents/ directory (e.g., 'agentic-designer')"
+    required: false
+  compose_prompt:
+    description: "Compose prompt from instructions/skills/agent (true/false)"
+    required: false
+    default: "false"
+  issue_comment_id:
+    description: "Tracking comment ID for progress updates"
+    required: false
+
   display_report:
     description: "Show the full Claude Code Report in GitHub Job Summary."
     required: false
@@ -132,7 +145,23 @@ runs:
       env:
         PROMPT_TEXT: ${{ inputs.prompt }}
 
-    # Step 6: Invoke upstream claude-code-action
+    # Step 6: Compose prompt from instructions/skills/agent (optional)
+    - name: Compose Prompt
+      id: compose-prompt
+      if: inputs.compose_prompt == 'true'
+      shell: bash
+      run: ${{ github.action_path }}/scripts/compose_prompt.sh
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        WORKSPACE_PATH: ${{ github.workspace }}
+        AGENT_NAME: ${{ inputs.agent_name }}
+        PROMPT_TEXT: ${{ inputs.prompt }}
+        ISSUE_NUMBER: ${{ github.event.issue.number }}
+        COMMENT_ID: ${{ inputs.issue_comment_id }}
+        RUN_ID: ${{ github.run_id }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    # Step 7: Invoke upstream claude-code-action
     - name: Run Claude Code
       id: claude
       uses: anthropics/claude-code-action@e763fe78de2db7389e04818a00b5ff8ba13d1360 # v1
@@ -143,7 +172,7 @@ runs:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
         github_token: ${{ steps.resolve-token.outputs.token }}
-        prompt: ${{ steps.build-prompt.outputs.prompt }}
+        prompt: ${{ inputs.compose_prompt == 'true' && steps.compose-prompt.outputs.prompt || steps.build-prompt.outputs.prompt }}
         claude_args: ${{ steps.build-args.outputs.args }}
         additional_permissions: ${{ inputs.additional_permissions }}
         settings: ${{ inputs.settings }}

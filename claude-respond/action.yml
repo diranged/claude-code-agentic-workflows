@@ -67,6 +67,19 @@ inputs:
   prompt:
     description: "Text to send to Claude as the prompt."
     required: false
+
+  # Compose prompt configuration
+  agent_name:
+    description: "Agent to load from agents/ directory (e.g., 'agentic-designer')"
+    required: false
+  compose_prompt:
+    description: "Compose prompt from instructions/skills/agent (true/false)"
+    required: false
+    default: "false"
+  issue_comment_id:
+    description: "Tracking comment ID for progress updates"
+    required: false
+
   display_report:
     description: "Show the full Claude Code Report in GitHub Job Summary."
     required: false
@@ -108,6 +121,9 @@ runs:
         additional_permissions: ${{ inputs.additional_permissions }}
         settings: ${{ inputs.settings }}
         prompt: ${{ inputs.prompt }}
+        agent_name: ${{ inputs.agent_name }}
+        compose_prompt: ${{ inputs.compose_prompt }}
+        issue_comment_id: ${{ inputs.issue_comment_id }}
         display_report: ${{ inputs.display_report }}
 
     # Step 2: Generate report and upload artifact

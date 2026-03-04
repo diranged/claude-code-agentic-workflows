@@ -19,6 +19,13 @@ _CLEARED_VARS = [
     "DISALLOWED_TOOLS",
     "EXTRA_ARGS",
     "PROMPT_TEXT",
+    "ACTION_PATH",
+    "WORKSPACE_PATH",
+    "AGENT_NAME",
+    "ISSUE_NUMBER",
+    "COMMENT_ID",
+    "RUN_ID",
+    "RUN_URL",
     "GITHUB_OUTPUT",
 ]
 

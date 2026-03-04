@@ -40,6 +40,9 @@ class TestActionYml(unittest.TestCase):
             "additional_permissions",
             "settings",
             "prompt",
+            "agent_name",
+            "compose_prompt",
+            "issue_comment_id",
             "display_report",
         ]
         for inp in expected:
@@ -54,6 +57,7 @@ class TestActionYml(unittest.TestCase):
         inputs = self.action["inputs"]
         self.assertEqual(inputs["trigger_phrase"]["default"], "@claude")
         self.assertEqual(inputs["timeout_minutes"]["default"], "60")
+        self.assertEqual(inputs["compose_prompt"]["default"], "false")
         self.assertEqual(inputs["display_report"]["default"], "true")
 
     def test_all_steps_use_bash_shell(self):
@@ -104,8 +108,8 @@ class TestActionYml(unittest.TestCase):
                 )
 
     def test_step_count(self):
-        """Should have 6 steps: app-token, resolve-token, validate-auth, build-args, build-prompt, claude."""
-        self.assertEqual(len(self.action["runs"]["steps"]), 6)
+        """Should have 7 steps: app-token, resolve-token, validate-auth, build-args, build-prompt, compose-prompt, claude."""
+        self.assertEqual(len(self.action["runs"]["steps"]), 7)
 
 
 if __name__ == "__main__":

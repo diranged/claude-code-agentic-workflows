@@ -128,4 +128,8 @@ Track test runs and fixes here:
 
 | Run | Date | Scenario | Score | Issues Found | Fix PR |
 |-----|------|----------|-------|-------------|--------|
-| | | | | | |
+| 1 | 2026-03-04 | S1 (issue #18) | 0% | Setup job 403 (missing permissions) | #19 |
+| 2 | 2026-03-04 | S1 (issue #21) | 0% | Workflow YAML invalid (block scalar indentation), debug workflow competing | #22 |
+| 3 | 2026-03-04 | S1 (issue #23) | 15% | Claude Code Bash tool denied (missing allowed_tools) | #24 |
+| 4 | 2026-03-04 | S1 (issue #25) | 98% | All checks pass | - |
+| 5 | 2026-03-04 | S2 (issue #25) | 100% | All checks pass, PR #26 opened | - |

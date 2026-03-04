@@ -201,4 +201,3 @@ runs:
         claude_args: ${{ steps.build-args.outputs.args }}
         additional_permissions: ${{ inputs.additional_permissions }}
         settings: ${{ inputs.settings }}
-        timeout_minutes: ${{ inputs.timeout_minutes }}

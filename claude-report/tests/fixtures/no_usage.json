@@ -1,0 +1,21 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "sess-nousage"
+  },
+  {
+    "type": "assistant",
+    "message": {
+      "content": "Hello"
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "duration_ms": 5000,
+    "num_turns": 1,
+    "total_cost_usd": 0,
+    "session_id": "sess-nousage"
+  }
+]

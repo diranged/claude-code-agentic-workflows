@@ -33,96 +33,11 @@ runs:
       if: always()
       shell: bash
       run: |
-        EXEC_FILE="$INPUT_EXECUTION_FILE"
-        SESSION_ID="$INPUT_SESSION_ID"
-        OUTCOME="$INPUT_OUTCOME"
-
-        # Determine status
-        if [ "$OUTCOME" = "success" ]; then
-          STATUS="✅ Success"
-        else
-          STATUS="❌ Failed"
-        fi
-
-        # If no execution file, write a minimal summary
-        if [ -z "$EXEC_FILE" ] || [ ! -f "$EXEC_FILE" ]; then
-          {
-            echo "## Claude Execution Summary"
-            echo ""
-            echo "| Metric | Value |"
-            echo "|--------|-------|"
-            echo "| Status | $STATUS |"
-            echo "| Session ID | \`$SESSION_ID\` |"
-            echo ""
-            echo "> No execution file found — detailed metrics unavailable."
-            echo ""
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit 0
-        fi
-
-        # Extract result turn metrics
-        RESULT=$(jq -r '.[] | select(.type == "result")' "$EXEC_FILE")
-
-        COST=$(echo "$RESULT" | jq -r '.total_cost_usd // 0')
-        DURATION_MS=$(echo "$RESULT" | jq -r '.duration_ms // 0')
-        NUM_TURNS=$(echo "$RESULT" | jq -r '.num_turns // "?"')
-
-        # Format duration
-        DURATION=$(awk -v ms="$DURATION_MS" 'BEGIN { printf "%.1fs", ms / 1000 }')
-
-        # Format cost
-        COST_FMT=$(awk -v c="$COST" 'BEGIN { printf "$%.4f", c }')
-
-        # Format numbers with commas
-        fmt() { printf "%'d" "$1" 2>/dev/null || echo "$1"; }
-
-        # Only show cost row when using API key billing (cost > 0)
-        SHOW_COST=$(awk -v c="$COST" 'BEGIN { print (c + 0 > 0) ? "true" : "false" }')
-
-        # Build per-model token usage table via jq
-        MODEL_TABLE=$(jq -r '
-          [ .[] | select(.model != null and .usage != null) |
-            { model, input: (.usage.input_tokens // 0),
-              output: (.usage.output_tokens // 0),
-              cache_read: (.usage.cache_read_input_tokens // 0),
-              cache_create: (.usage.cache_creation_input_tokens // 0) } ]
-          | group_by(.model)
-          | map({
-              model: .[0].model,
-              input: (map(.input) | add),
-              output: (map(.output) | add),
-              cache_read: (map(.cache_read) | add),
-              cache_create: (map(.cache_create) | add) })
-          | .[] | "\(.model)|\(.input)|\(.output)|\(.cache_read)|\(.cache_create)"
-        ' "$EXEC_FILE" 2>/dev/null)
-
-        # Write summary (prepended before the verbose report)
-        {
-          echo "## Claude Execution Summary"
-          echo ""
-          echo "| Metric | Value |"
-          echo "|--------|-------|"
-          echo "| Status | $STATUS |"
-          echo "| Duration | $DURATION |"
-          echo "| Turns | $NUM_TURNS |"
-          if [ "$SHOW_COST" = "true" ]; then
-            echo "| Cost | $COST_FMT |"
-          fi
-          echo "| Session ID | \`$SESSION_ID\` |"
-          echo ""
-          echo "### Token Usage by Model"
-          echo ""
-          echo "| Model | Input | Output | Cache Read | Cache Create |"
-          echo "|-------|------:|-------:|-----------:|-------------:|"
-          if [ -n "$MODEL_TABLE" ]; then
-            while IFS='|' read -r model input output cache_read cache_create; do
-              echo "| $model | $(fmt "$input") | $(fmt "$output") | $(fmt "$cache_read") | $(fmt "$cache_create") |"
-            done <<< "$MODEL_TABLE"
-          else
-            echo "| _unknown_ | 0 | 0 | 0 | 0 |"
-          fi
-          echo ""
-        } >> "$GITHUB_STEP_SUMMARY"
+        python3 "${{ github.action_path }}/generate_summary.py" \
+          --execution-file "$INPUT_EXECUTION_FILE" \
+          --session-id "$INPUT_SESSION_ID" \
+          --outcome "$INPUT_OUTCOME" \
+          >> "$GITHUB_STEP_SUMMARY"
       env:
         INPUT_EXECUTION_FILE: ${{ inputs.execution_file }}
         INPUT_SESSION_ID: ${{ inputs.session_id }}

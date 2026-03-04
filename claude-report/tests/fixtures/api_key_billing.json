@@ -1,0 +1,25 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "session_id": "sess-billing789"
+  },
+  {
+    "type": "assistant",
+    "model": "claude-sonnet-4-20250514",
+    "usage": {
+      "input_tokens": 25000,
+      "output_tokens": 8000,
+      "cache_read_input_tokens": 15000,
+      "cache_creation_input_tokens": 3000
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "duration_ms": 30500,
+    "num_turns": 3,
+    "total_cost_usd": 0.0542,
+    "session_id": "sess-billing789"
+  }
+]

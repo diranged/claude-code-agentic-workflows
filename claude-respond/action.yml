@@ -83,7 +83,7 @@ runs:
     - name: Generate GitHub App Token
       id: app-token
       if: inputs.app_id != '' && inputs.app_private_key != ''
-      uses: actions/create-github-app-token@v2
+      uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
       with:
         app-id: ${{ inputs.app_id }}
         private-key: ${{ inputs.app_private_key }}
@@ -189,7 +189,7 @@ runs:
     # Step 6: Invoke upstream claude-code-action
     - name: Run Claude Code
       id: claude
-      uses: anthropics/claude-code-action@v1
+      uses: anthropics/claude-code-action@e763fe78de2db7389e04818a00b5ff8ba13d1360 # v1
       with:
         trigger_phrase: ${{ inputs.trigger_phrase }}
         assignee_trigger: ${{ inputs.assignee_trigger }}

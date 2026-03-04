@@ -23,12 +23,12 @@ jobs:
     steps:
       - name: Detect intent
         id: detect
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body || '' }}
         run: |
           echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
 
-          BODY="${{ github.event.comment.body || '' }}"
-
-          if [[ "$BODY" == *"@claude implement"* ]]; then
+          if [[ "$COMMENT_BODY" == *"@claude implement"* ]]; then
             echo "agent=agentic-developer" >> "$GITHUB_OUTPUT"
           else
             echo "agent=agentic-designer" >> "$GITHUB_OUTPUT"
@@ -58,24 +58,25 @@ jobs:
 
       - name: Create tracking comment
         id: create-comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.detect-intent.outputs.issue_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          COMMENT_ID=$(gh api \
-            --method POST \
-            "/repos/${{ github.repository }}/issues/${{ needs.detect-intent.outputs.issue_number }}/comments" \
-            -f body="$(cat <<'EOF'
-          <!-- claude-tracking-comment -->
+          BODY="<!-- claude-tracking-comment -->
 
           ## Status: Initializing
 
-          **Run:** [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          **Run:** [View workflow run](${RUN_URL})
 
-          Claude is initializing...
-          EOF
-          )" \
+          Claude is initializing..."
+
+          COMMENT_ID=$(gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/comments" \
+            -f body="$BODY" \
             --jq '.id')
           echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
 
   # Job 3: Run Claude with composed prompt
@@ -95,6 +96,8 @@ jobs:
         uses: ./claude-respond
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          trigger_phrase: "@claude"
+          assignee_trigger: "claude"
           compose_prompt: "true"
           agent_name: ${{ needs.detect-intent.outputs.agent }}
           issue_comment_id: ${{ needs.setup.outputs.comment_id }}

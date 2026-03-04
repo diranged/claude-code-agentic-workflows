@@ -100,3 +100,4 @@ jobs:
           compose_prompt: "true"
           agent_name: ${{ needs.detect-intent.outputs.agent }}
           issue_comment_id: ${{ needs.setup.outputs.comment_id }}
+          allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"

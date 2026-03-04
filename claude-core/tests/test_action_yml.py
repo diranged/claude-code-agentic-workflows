@@ -108,8 +108,14 @@ class TestActionYml(unittest.TestCase):
                 )
 
     def test_step_count(self):
-        """Should have 7 steps: app-token, resolve-token, validate-auth, build-args, build-prompt, compose-prompt, claude."""
+        """Should have 7 steps: validate-inputs, app-token, resolve-token, build-args, build-prompt, compose-prompt, claude."""
         self.assertEqual(len(self.action["runs"]["steps"]), 7)
+
+    def test_first_step_validates_inputs(self):
+        """First step should use validate_inputs.sh script."""
+        first_step = self.action["runs"]["steps"][0]
+        self.assertEqual(first_step["name"], "Validate Inputs")
+        self.assertIn("validate_inputs.sh", first_step["run"])
 
 
 if __name__ == "__main__":

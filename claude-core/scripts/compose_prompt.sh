@@ -11,7 +11,7 @@
 #   7. PROMPT_TEXT as "Task Context"
 #
 # Required env: ACTION_PATH, WORKSPACE_PATH, AGENT_NAME
-# Optional env: PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL
+# Optional env: PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY
 set -euo pipefail
 
 PROMPT=""
@@ -77,6 +77,9 @@ if [ -n "${ISSUE_NUMBER:-}" ]; then
 fi
 if [ -n "${COMMENT_ID:-}" ]; then
   CONTEXT="${CONTEXT}- Tracking Comment ID: ${COMMENT_ID}"$'\n'
+fi
+if [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  CONTEXT="${CONTEXT}- Repository: ${GITHUB_REPOSITORY}"$'\n'
 fi
 append_section "$CONTEXT"
 

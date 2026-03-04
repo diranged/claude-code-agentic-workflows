@@ -1,6 +1,7 @@
 name: "Test: Claude Respond"
 
 on:
+  # Production triggers — only fire from default branch
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -8,14 +9,18 @@ on:
   issues:
     types: [opened, assigned]
 
+  # Dev trigger — works from any branch: gh workflow run "Test: Claude Respond" --ref <branch>
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Prompt to send to Claude"
+        required: false
+        default: "Say hello and confirm you are working. Keep it to one sentence."
+
 jobs:
+  # Event-driven: @claude mentions in issues/PRs
   claude-respond:
-    # Only run on @claude mentions or issue assignment
-    if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action == 'assigned')
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,5 +34,23 @@ jobs:
         uses: ./claude-respond
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-          timeout_minutes: "10"
           max_turns: "5"
+
+  # Manual dispatch: test from any branch without issues
+  claude-respond-dispatch:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Claude Respond
+        uses: ./claude-respond
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          max_turns: "3"
+          append_system_prompt: ${{ inputs.prompt }}

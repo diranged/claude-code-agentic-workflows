@@ -140,12 +140,6 @@ runs:
           ARGS="$ARGS --max-turns $MAX_TURNS"
         fi
 
-        if [ -n "$TIMEOUT_MINUTES" ]; then
-          # Convert minutes to seconds for --timeout flag
-          TIMEOUT_SECS=$((TIMEOUT_MINUTES * 60))
-          ARGS="$ARGS --timeout $TIMEOUT_SECS"
-        fi
-
         if [ -n "$ALLOWED_TOOLS" ]; then
           ARGS="$ARGS --allowedTools $ALLOWED_TOOLS"
         fi
@@ -165,7 +159,6 @@ runs:
       env:
         MODEL: ${{ inputs.model }}
         MAX_TURNS: ${{ inputs.max_turns }}
-        TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
         ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
         DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
         EXTRA_ARGS: ${{ inputs.claude_args }}

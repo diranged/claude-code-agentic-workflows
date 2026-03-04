@@ -20,6 +20,7 @@ jobs:
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
       agent: ${{ steps.detect.outputs.agent }}
+      model: ${{ steps.detect.outputs.model }}
       issue_number: ${{ steps.detect.outputs.issue_number }}
     steps:
       - name: Detect intent
@@ -31,8 +32,10 @@ jobs:
 
           if [[ "$COMMENT_BODY" == *"@claude implement"* ]]; then
             echo "agent=agentic-developer" >> "$GITHUB_OUTPUT"
+            echo "model=claude-sonnet-4-20250514" >> "$GITHUB_OUTPUT"
           else
             echo "agent=agentic-designer" >> "$GITHUB_OUTPUT"
+            echo "model=claude-opus-4-20250514" >> "$GITHUB_OUTPUT"
           fi
 
           echo "should_run=true" >> "$GITHUB_OUTPUT"
@@ -99,5 +102,6 @@ jobs:
           assignee_trigger: "claude"
           compose_prompt: "true"
           agent_name: ${{ needs.detect-intent.outputs.agent }}
+          model: ${{ needs.detect-intent.outputs.model }}
           issue_comment_id: ${{ needs.setup.outputs.comment_id }}
           allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"

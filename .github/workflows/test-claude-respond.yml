@@ -53,4 +53,4 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           max_turns: "3"
-          append_system_prompt: ${{ inputs.prompt }}
+          prompt: ${{ inputs.prompt }}

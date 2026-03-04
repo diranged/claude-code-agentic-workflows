@@ -1,0 +1,118 @@
+name: "Claude Report"
+description: "Generates execution summary table and uploads artifact from Claude Code execution output."
+branding:
+  icon: "bar-chart-2"
+  color: "green"
+
+inputs:
+  execution_file:
+    description: "Path to the Claude Code execution JSON file."
+    required: true
+  session_id:
+    description: "Claude Code session ID to display in the summary."
+    required: false
+    default: ""
+  outcome:
+    description: "Execution outcome — 'success' or 'failure' for status display."
+    required: false
+    default: "success"
+  artifact_name:
+    description: "Override the artifact name."
+    required: false
+    default: "claude-execution-${{ github.run_id }}"
+  retention_days:
+    description: "Artifact retention in days."
+    required: false
+    default: "30"
+
+runs:
+  using: "composite"
+  steps:
+    # Step 1: Generate concise execution summary
+    - name: Claude Execution Summary
+      if: always()
+      shell: bash
+      run: |
+        EXEC_FILE="$INPUT_EXECUTION_FILE"
+        SESSION_ID="$INPUT_SESSION_ID"
+        OUTCOME="$INPUT_OUTCOME"
+
+        # Determine status
+        if [ "$OUTCOME" = "success" ]; then
+          STATUS="✅ Success"
+        else
+          STATUS="❌ Failed"
+        fi
+
+        # If no execution file, write a minimal summary
+        if [ -z "$EXEC_FILE" ] || [ ! -f "$EXEC_FILE" ]; then
+          {
+            echo "## Claude Execution Summary"
+            echo ""
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "| Status | $STATUS |"
+            echo "| Session ID | \`$SESSION_ID\` |"
+            echo ""
+            echo "> No execution file found — detailed metrics unavailable."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        # Extract result turn metrics
+        RESULT=$(jq -r '.[] | select(.type == "result")' "$EXEC_FILE")
+
+        COST=$(echo "$RESULT" | jq -r '.total_cost_usd // 0')
+        DURATION_MS=$(echo "$RESULT" | jq -r '.duration_ms // 0')
+        NUM_TURNS=$(echo "$RESULT" | jq -r '.num_turns // "?"')
+
+        # Format duration
+        DURATION=$(awk "BEGIN { printf \"%.1fs\", $DURATION_MS / 1000 }")
+
+        # Format cost
+        COST_FMT=$(awk "BEGIN { printf \"\\$%.4f\", $COST }")
+
+        # Sum token usage across all turns
+        INPUT_TOKENS=$(jq '[.[] | .usage.input_tokens // 0] | add' "$EXEC_FILE")
+        OUTPUT_TOKENS=$(jq '[.[] | .usage.output_tokens // 0] | add' "$EXEC_FILE")
+        CACHE_READ=$(jq '[.[] | .usage.cache_read_input_tokens // 0] | add' "$EXEC_FILE")
+        CACHE_CREATE=$(jq '[.[] | .usage.cache_creation_input_tokens // 0] | add' "$EXEC_FILE")
+
+        # Format numbers with commas
+        fmt() { printf "%'d" "$1" 2>/dev/null || echo "$1"; }
+
+        # Detect model from the first assistant turn
+        MODEL=$(jq -r '[.[] | select(.type == "assistant") | .model // empty][0] // "unknown"' "$EXEC_FILE")
+
+        # Write summary (prepended before the verbose report)
+        {
+          echo "## Claude Execution Summary"
+          echo ""
+          echo "| Metric | Value |"
+          echo "|--------|-------|"
+          echo "| Status | $STATUS |"
+          echo "| Duration | $DURATION |"
+          echo "| Turns | $NUM_TURNS |"
+          echo "| Cost | $COST_FMT |"
+          echo "| Input tokens | $(fmt "${INPUT_TOKENS:-0}") |"
+          echo "| Output tokens | $(fmt "${OUTPUT_TOKENS:-0}") |"
+          echo "| Cache read | $(fmt "${CACHE_READ:-0}") |"
+          echo "| Cache creation | $(fmt "${CACHE_CREATE:-0}") |"
+          echo "| Model | $MODEL |"
+          echo "| Session ID | \`$SESSION_ID\` |"
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"
+      env:
+        INPUT_EXECUTION_FILE: ${{ inputs.execution_file }}
+        INPUT_SESSION_ID: ${{ inputs.session_id }}
+        INPUT_OUTCOME: ${{ inputs.outcome }}
+
+    # Step 2: Upload execution log as artifact
+    - name: Upload Execution Log
+      if: always() && inputs.execution_file != ''
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ${{ inputs.execution_file }}
+        retention-days: ${{ inputs.retention_days }}

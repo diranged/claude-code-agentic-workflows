@@ -1,5 +1,5 @@
 name: "Claude Respond"
-description: "Interactive Claude assistant triggered by @claude mentions in issues and PRs. Wraps anthropics/claude-code-action with simplified auth and input handling."
+description: "Interactive Claude assistant triggered by @claude mentions in issues and PRs. Composes claude-core and claude-report for auth, execution, and reporting."
 branding:
   icon: "message-circle"
   color: "orange"
@@ -64,133 +64,57 @@ inputs:
   settings:
     description: "Claude Code settings as JSON string or path to settings JSON file."
     required: false
-  append_system_prompt:
-    description: "Additional instructions appended to the prompt sent to Claude."
+  prompt:
+    description: "Text to send to Claude as the prompt."
     required: false
+  display_report:
+    description: "Show the full Claude Code Report in GitHub Job Summary."
+    required: false
+    default: "true"
 
 outputs:
   execution_file:
     description: "Path to the Claude Code execution output file"
-    value: ${{ steps.claude.outputs.execution_file }}
+    value: ${{ steps.core.outputs.execution_file }}
   branch_name:
     description: "The branch created by Claude Code for this execution"
-    value: ${{ steps.claude.outputs.branch_name }}
+    value: ${{ steps.core.outputs.branch_name }}
+  session_id:
+    description: "Claude Code session ID for resuming conversations"
+    value: ${{ steps.core.outputs.session_id }}
 
 runs:
   using: "composite"
   steps:
-    # Step 1: Generate GitHub App token if App credentials provided
-    - name: Generate GitHub App Token
-      id: app-token
-      if: inputs.app_id != '' && inputs.app_private_key != ''
-      uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+    # Step 1: Run Claude via claude-core
+    - name: Run Claude Core
+      id: core
+      uses: diranged/claude-code-agentic-workflows/claude-core@issue-2/fix-args
       with:
-        app-id: ${{ inputs.app_id }}
-        private-key: ${{ inputs.app_private_key }}
-
-    # Step 2: Determine effective GitHub token
-    - name: Resolve GitHub Token
-      id: resolve-token
-      shell: bash
-      run: |
-        if [ -n "$APP_TOKEN" ]; then
-          echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
-          echo "::notice::Using GitHub App token for authentication"
-        elif [ -n "$EXPLICIT_TOKEN" ]; then
-          echo "token=$EXPLICIT_TOKEN" >> "$GITHUB_OUTPUT"
-          echo "::notice::Using explicitly provided github_token"
-        else
-          echo "token=" >> "$GITHUB_OUTPUT"
-          echo "::notice::No explicit GitHub token — upstream action will use default GITHUB_TOKEN"
-        fi
-      env:
-        APP_TOKEN: ${{ steps.app-token.outputs.token }}
-        EXPLICIT_TOKEN: ${{ inputs.github_token }}
-
-    # Step 3: Validate Claude auth
-    - name: Validate Claude Authentication
-      shell: bash
-      run: |
-        if [ -z "$OAUTH_TOKEN" ] && [ -z "$API_KEY" ]; then
-          echo "::error::No Claude authentication provided. Set either 'claude_code_oauth_token' (recommended) or 'anthropic_api_key'."
-          exit 1
-        fi
-
-        if [ -n "$OAUTH_TOKEN" ]; then
-          echo "::notice::Using Claude Code OAuth token (subscription billing)"
-        else
-          echo "::notice::Using Anthropic API key (per-token billing)"
-        fi
-      env:
-        OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
-        API_KEY: ${{ inputs.anthropic_api_key }}
-
-    # Step 4: Build claude_args from structured inputs
-    - name: Build Claude Args
-      id: build-args
-      shell: bash
-      run: |
-        ARGS=""
-
-        if [ -n "$MODEL" ]; then
-          ARGS="$ARGS --model $MODEL"
-        fi
-
-        if [ -n "$MAX_TURNS" ]; then
-          ARGS="$ARGS --max-turns $MAX_TURNS"
-        fi
-
-        if [ -n "$ALLOWED_TOOLS" ]; then
-          ARGS="$ARGS --allowedTools $ALLOWED_TOOLS"
-        fi
-
-        if [ -n "$DISALLOWED_TOOLS" ]; then
-          ARGS="$ARGS --disallowedTools $DISALLOWED_TOOLS"
-        fi
-
-        # Append any additional raw claude_args
-        if [ -n "$EXTRA_ARGS" ]; then
-          ARGS="$ARGS $EXTRA_ARGS"
-        fi
-
-        echo "args<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$ARGS" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
-      env:
-        MODEL: ${{ inputs.model }}
-        MAX_TURNS: ${{ inputs.max_turns }}
-        ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
-        DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
-        EXTRA_ARGS: ${{ inputs.claude_args }}
-
-    # Step 5: Build prompt with optional system prompt append
-    - name: Build Prompt
-      id: build-prompt
-      shell: bash
-      run: |
-        PROMPT=""
-        if [ -n "$APPEND_SYSTEM_PROMPT" ]; then
-          PROMPT="$APPEND_SYSTEM_PROMPT"
-        fi
-
-        echo "prompt<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$PROMPT" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
-      env:
-        APPEND_SYSTEM_PROMPT: ${{ inputs.append_system_prompt }}
-
-    # Step 6: Invoke upstream claude-code-action
-    - name: Run Claude Code
-      id: claude
-      uses: anthropics/claude-code-action@e763fe78de2db7389e04818a00b5ff8ba13d1360 # v1
-      with:
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        github_token: ${{ inputs.github_token }}
+        app_id: ${{ inputs.app_id }}
+        app_private_key: ${{ inputs.app_private_key }}
         trigger_phrase: ${{ inputs.trigger_phrase }}
         assignee_trigger: ${{ inputs.assignee_trigger }}
         label_trigger: ${{ inputs.label_trigger }}
-        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
-        github_token: ${{ steps.resolve-token.outputs.token }}
-        prompt: ${{ steps.build-prompt.outputs.prompt }}
-        claude_args: ${{ steps.build-args.outputs.args }}
+        model: ${{ inputs.model }}
+        max_turns: ${{ inputs.max_turns }}
+        timeout_minutes: ${{ inputs.timeout_minutes }}
+        allowed_tools: ${{ inputs.allowed_tools }}
+        disallowed_tools: ${{ inputs.disallowed_tools }}
+        claude_args: ${{ inputs.claude_args }}
         additional_permissions: ${{ inputs.additional_permissions }}
         settings: ${{ inputs.settings }}
+        prompt: ${{ inputs.prompt }}
+        display_report: ${{ inputs.display_report }}
+
+    # Step 2: Generate report and upload artifact
+    - name: Generate Report
+      if: always()
+      uses: diranged/claude-code-agentic-workflows/claude-report@issue-2/fix-args
+      with:
+        execution_file: ${{ steps.core.outputs.execution_file }}
+        session_id: ${{ steps.core.outputs.session_id }}
+        outcome: ${{ steps.core.outcome }}

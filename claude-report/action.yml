@@ -82,8 +82,8 @@ runs:
         # Format numbers with commas
         fmt() { printf "%'d" "$1" 2>/dev/null || echo "$1"; }
 
-        # Detect model from the first assistant turn
-        MODEL=$(jq -r '[.[] | select(.type == "assistant") | .model // empty][0] // "unknown"' "$EXEC_FILE")
+        # Detect model from the system init turn
+        MODEL=$(jq -r '[.[] | select(.model != null) | .model][0] // "unknown"' "$EXEC_FILE")
 
         # Only show cost row when using API key billing (cost > 0)
         SHOW_COST=$(awk -v c="$COST" 'BEGIN { print (c + 0 > 0) ? "true" : "false" }')

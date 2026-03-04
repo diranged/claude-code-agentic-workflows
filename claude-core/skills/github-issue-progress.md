@@ -32,6 +32,8 @@ COMMENT_EOF
 )"
 ```
 
+**Important:** Replace `<RUN_URL>` with the actual run URL from the runtime context. This is provided as the `Run URL` field. Always include this link so reviewers can navigate directly to the workflow logs.
+
 Replace `<STATUS>` with one of:
 - **In Progress** — actively working
 - **Needs Input** — blocked, waiting for human feedback
@@ -42,6 +44,6 @@ Replace `<STATUS>` with one of:
 
 1. Update the tracking comment at meaningful milestones (starting work, design posted, PR created, blocked).
 2. Always preserve the `<!-- claude-tracking-comment -->` HTML marker as the first line.
-3. Include the workflow run link so reviewers can inspect logs.
+3. Always include the workflow run link (`**Run:** [View workflow run](...)`) so reviewers can inspect logs.
 4. When blocked or needing clarification, set status to **Needs Input** and clearly describe what you need.
 5. Keep the comment body concise — use `<details>` blocks for verbose content.

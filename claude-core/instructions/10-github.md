@@ -12,3 +12,9 @@
 - **Never create new top-level comments** on the issue — always update the existing tracking comment.
 - The tracking comment ID is provided in the runtime context below.
 - Use `gh api` with PATCH to update the comment body.
+
+## Workflow Run Links
+
+- The workflow run URL is provided in the runtime context as `Run URL`.
+- **Always include this link** in your tracking comment and any PR you create so reviewers can navigate to the CI logs.
+- Format: `**Run:** [View workflow run](<URL>)`

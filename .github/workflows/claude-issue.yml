@@ -91,6 +91,9 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Setup GitHub CLI
+        uses: actions4gh/setup-gh@10aaae734648c536041e1bce50fc8c5541806255 # v1
+
       - name: Run Claude
         uses: ./claude-respond
         with:

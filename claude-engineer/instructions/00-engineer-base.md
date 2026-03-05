@@ -10,16 +10,61 @@ The base instructions say "Never push directly to main/master." You will not pus
 
 ## Workflow
 
-Every run follows this sequence:
+Every run has three phases: **Discovery**, **Work**, and **Reconciliation**.
 
-1. Find or create your dashboard issue
-2. Check if dashboard rotation is needed
-3. Read your dashboard for context from prior runs
-4. Check status of previously delegated work items
-5. Scan the codebase for issues in your focus area
-6. Create new work items for actionable findings
-7. Update the dashboard issue body with current status
-8. Add a run comment summarizing this run
+### Phase 1: Discovery
+
+Build full context before doing any analysis.
+
+1. **Find or create your dashboard issue** (see Dashboard Management below).
+2. **Check if dashboard rotation is needed.**
+3. **Read your dashboard thoroughly** — the issue body AND all comments, in chronological order. This is your memory from prior runs.
+4. **Review all open issues with your task label:**
+   ```bash
+   gh issue list --repo "$GITHUB_REPOSITORY" --label "<task_label>" --state open --json number,title,body
+   ```
+   Read each issue body to understand what work is already tracked.
+5. **Review all open PRs in the repo** — title, description, and changed files:
+   ```bash
+   gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title,body,files --limit 30
+   ```
+   This tells you what changes are in flight and prevents creating issues for work that's already underway.
+
+### Phase 2: Work
+
+Scan the codebase for issues in your focus area (defined by your agent personality). See your agent-specific instructions for scanning strategy.
+
+### Phase 3: Reconciliation
+
+Before creating anything new, reconcile existing issues against the current state of the codebase.
+
+1. **Review each open issue from Phase 1.** For every issue you previously created:
+   - Check whether the problem it describes **still exists** in the codebase. Someone (a human, another agent, or a merged PR) may have already fixed it.
+   - If the issue is resolved, close it with a comment explaining what resolved it (e.g., "Fixed by PR #N" or "Resolved — the file was updated in commit abc1234").
+   - If the issue is partially resolved, update it to reflect the remaining work.
+   - If an open PR addresses the issue, note that on the dashboard but do not close the issue yet.
+
+2. **Check new findings against existing issues.** For each finding from Phase 2:
+   - Would fixing an existing open issue also resolve this finding? If so, skip it.
+   - Is there an open PR that already addresses this? If so, skip it.
+   - Only create a new issue if the finding is genuinely new and not covered by existing work.
+
+3. **Create new work items** for findings that survived the checks above (see Work Delegation below).
+
+4. **Update the dashboard** issue body with current status.
+
+5. **Add a run comment** summarizing this run.
+
+### Reconciliation Examples
+
+**Issue resolved by a human or another agent:**
+> You created issue #50 "Remove bogus junk from README.md". On your next run, you discover that README.md has been updated and the bogus junk is gone. Close #50 with a comment: "Resolved — the README was updated and the flagged content has been removed."
+
+**Issue resolved by a merged PR:**
+> You created issue #60 "Consolidate duplicate Makefile patterns". PR #62 merged with title "refactor: consolidate duplicate Makefile patterns." Close #60 referencing the PR.
+
+**Finding subsumed by an existing issue:**
+> You find that `directory-x/requirements-test.txt` duplicates the root file. But you already have open issue #72 "Switch directory-x to shared Makefile pattern" — and adopting the shared pattern eliminates the local requirements file. Skip creating a new issue; #72 already covers it.
 
 ## Dashboard Management
 
@@ -101,16 +146,16 @@ After each run, add a comment to the dashboard issue:
 
 **Run:** [View workflow run](<RUN_URL>)
 
-### Scan Summary
-- Files scanned: <count>
-- Issues found: <count>
+### Reconciliation
+- Issues closed (resolved): <list or "None">
+- Issues updated: <list or "None">
+
+### Scan Results
+- New findings: <count>
 - Issues created: <count>
 
-### Findings
-<List of issues found, or "No new issues found.">
-
-### Actions Taken
-<Issues created, status updates, or "No actions needed.">
+### Details
+<Brief description of what was found, closed, or created>
 ```
 
 Skip the comment entirely if you found nothing new and took no actions.
@@ -119,28 +164,15 @@ Skip the comment entirely if you found nothing new and took no actions.
 
 ### Creating Work Items
 
-When you find an actionable issue:
+By the time you create an issue, Phase 3 has already confirmed the finding is new and not covered by existing work.
 
-1. **Search for duplicates first:**
-   ```bash
-   gh issue list --repo "$GITHUB_REPOSITORY" --label "<task_label>" --state open --json number,title
-   ```
+1. **Create a focused issue** with a clear title and description including file paths and line references where relevant.
 
-2. **Create a focused issue** with a clear title and description including file paths and line references where relevant.
-
-3. **Delegate to the design pipeline** by adding the delegation label:
+2. **Delegate to the design pipeline** by adding the delegation label:
    ```bash
    gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "<delegation_label>"
    ```
    This triggers the design → review → implement pipeline.
-
-### Checking Delegated Work
-
-For each issue in your Active Work Items:
-- Check if it's been closed (merged PR)
-- Check if it has an open PR
-- Update dashboard status accordingly
-- Move completed items to the Completed table
 
 ## Constraints
 

@@ -19,7 +19,7 @@ inputs:
   artifact_name:
     description: "Override the artifact name."
     required: false
-    default: "claude-execution-${{ github.run_id }}"
+    default: "claude-execution-${{ github.job }}-${{ github.run_id }}"
   retention_days:
     description: "Artifact retention in days."
     required: false

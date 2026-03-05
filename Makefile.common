@@ -1,0 +1,17 @@
+# Common venv+unittest pattern for test directories
+# Include from subdirectory Makefiles with:
+#   TEST_DIR := tests/   # or "." for in-place discovery
+#   include ../Makefile.common
+
+TEST_DIR ?= tests/
+VENV := .venv
+PYTHON := $(VENV)/bin/python3
+
+.PHONY: test
+test: $(VENV)
+	$(PYTHON) -m unittest discover $(TEST_DIR) -v
+
+$(VENV): requirements-test.txt
+	python3 -m venv $(VENV)
+	$(PYTHON) -m pip install -q -r requirements-test.txt
+	@touch $(VENV)

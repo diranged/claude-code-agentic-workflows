@@ -5,6 +5,8 @@ on:
     types: [created]
   issues:
     types: [assigned, labeled]
+  pull_request_review_comment:
+    types: [created]
   workflow_run:
     workflows: ["Tests", "Conventional Commit Check"]
     types: [completed]
@@ -14,15 +16,18 @@ jobs:
   detect-intent:
     runs-on: ubuntu-latest
     if: >-
-      !github.event.issue.pull_request
-      && (
-        (github.event_name == 'issue_comment'
-          && github.event.sender.type != 'Bot'
-          && contains(github.event.comment.body, '@claude'))
-        || (github.event_name == 'issues' && github.event.action == 'assigned')
-        || (github.event_name == 'issues' && github.event.action == 'labeled'
-          && startsWith(github.event.label.name, 'claude:'))
-      )
+      (github.event_name == 'issue_comment'
+        && github.event.sender.type != 'Bot'
+        && contains(github.event.comment.body, '@claude'))
+      || (github.event_name == 'pull_request_review_comment'
+        && github.event.sender.type != 'Bot'
+        && contains(github.event.comment.body, '@claude'))
+      || (github.event_name == 'issues' && github.event.action == 'assigned'
+        && !github.event.issue.pull_request)
+      || (github.event_name == 'issues' && github.event.action == 'labeled'
+        && !github.event.issue.pull_request
+        && startsWith(github.event.label.name, 'claude:'))
+      || (github.event_name == 'workflow_run')
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
       agent: ${{ steps.detect.outputs.agent }}
@@ -41,7 +46,11 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body || '' }}
           TRIGGER_LABEL: ${{ github.event.label.name || '' }}
         run: |
-          echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          # issue_comment uses issue.number (works for both issues and PRs)
+          # pull_request_review_comment uses pull_request.number
+          # workflow_run is handled by ci-retry job separately
+          ISSUE_NUM="${{ github.event.issue.number || github.event.pull_request.number || '' }}"
+          echo "issue_number=${ISSUE_NUM}" >> "$GITHUB_OUTPUT"
           echo "should_run=true" >> "$GITHUB_OUTPUT"
           bash claude-core/scripts/detect_intent.sh
         shell: bash
@@ -57,7 +66,7 @@ jobs:
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
     steps:
       - name: Add reaction to triggering comment
-        if: github.event_name == 'issue_comment'
+        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
         run: |
           gh api \
             --method POST \

@@ -117,7 +117,7 @@ runs:
     # Step 1: Run Claude via claude-core
     - name: Run Claude Core
       id: core
-      uses: diranged/claude-code-agentic-workflows/claude-core@main
+      uses: diranged/claude-code-agentic-workflows/claude-core@v0
       with:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
@@ -148,7 +148,7 @@ runs:
     # Step 2: Generate report and upload artifact
     - name: Generate Report
       if: always()
-      uses: diranged/claude-code-agentic-workflows/claude-report@main
+      uses: diranged/claude-code-agentic-workflows/claude-report@v0
       with:
         execution_file: ${{ steps.core.outputs.execution_file }}
         session_id: ${{ steps.core.outputs.session_id }}

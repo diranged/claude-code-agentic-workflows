@@ -115,8 +115,8 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Execute pipeline stage
-        # Use @main for development, pin to a release tag for production (e.g., @v1)
-        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        # Use @main for development, pin to @v0 for production
+        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
         with:
           # Primary authentication - Claude Code OAuth token (recommended)
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}

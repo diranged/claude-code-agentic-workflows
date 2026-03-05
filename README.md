@@ -10,6 +10,18 @@ The core actions include **claude-respond** (interactive assistant triggered by 
 
 Key differentiator: Claude Max subscribers can run these agents with no additional per-execution costs via OAuth authentication, making AI-powered workflows economically viable for regular use.
 
+## Versioning
+
+This project uses semantic versioning with a `v0` pre-release strategy:
+
+- **`@v0`** — Pin to the latest stable v0.x.y release (recommended for most users)
+- **`@v0.x.y`** — Pin to an exact version for reproducible builds
+- **`@main`** — Development branch (not recommended for production use)
+
+The project is currently pre-1.0, meaning breaking changes may occur between minor versions. All actions (claude-core, claude-respond, claude-engineer, claude-agent, claude-report) are versioned together as a monolithic release.
+
+For release process and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Quick Start
 
 ### Prerequisites
@@ -42,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Claude
-        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
@@ -211,7 +223,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Claude
-        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           compose_prompt: "true"
@@ -242,7 +254,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Documentation Engineer
-        uses: diranged/claude-code-agentic-workflows/claude-engineer@main
+        uses: diranged/claude-code-agentic-workflows/claude-engineer@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           agent_name: "docs-engineer"
@@ -269,7 +281,7 @@ The `compose_prompt` system combines multiple sources to create sophisticated ag
 ### Usage
 
 ```yaml
-- uses: diranged/claude-code-agentic-workflows/claude-respond@main
+- uses: diranged/claude-code-agentic-workflows/claude-respond@v0
   with:
     compose_prompt: "true"
     agent_name: "agentic-designer"

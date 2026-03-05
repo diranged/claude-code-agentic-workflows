@@ -137,6 +137,59 @@ class TestComposePrompt(unittest.TestCase):
         self.assertIn("Custom User Instruction", prompt)
         self.assertIn("Always use TypeScript", prompt)
 
+    def test_extra_instructions_path(self):
+        """Extra instructions from EXTRA_INSTRUCTIONS_PATH should be included."""
+        extra_dir = tempfile.mkdtemp()
+        with open(os.path.join(extra_dir, "00-extra.md"), "w") as f:
+            f.write("# Extra Engineer Instructions\n\nShared engineer behavior.\n")
+
+        rc, _, _, outputs = self._run({"EXTRA_INSTRUCTIONS_PATH": extra_dir})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Extra Engineer Instructions", prompt)
+        self.assertIn("Shared engineer behavior", prompt)
+
+    def test_extra_instructions_before_user_overrides(self):
+        """Extra instructions should appear before user instruction overrides."""
+        extra_dir = tempfile.mkdtemp()
+        with open(os.path.join(extra_dir, "00-extra.md"), "w") as f:
+            f.write("# Extra Instructions Here\n")
+
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-instructions")
+        os.makedirs(override_dir)
+        with open(os.path.join(override_dir, "99-custom.md"), "w") as f:
+            f.write("# User Override Here\n")
+
+        rc, _, _, outputs = self._run({
+            "EXTRA_INSTRUCTIONS_PATH": extra_dir,
+        }, workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        extra_pos = prompt.find("Extra Instructions Here")
+        user_pos = prompt.find("User Override Here")
+        self.assertGreater(extra_pos, -1)
+        self.assertGreater(user_pos, -1)
+        self.assertLess(extra_pos, user_pos)
+
+    def test_engineer_base_loads_with_agent(self):
+        """Engineer base instructions + agent should compose correctly via extra paths."""
+        engineer_instructions = os.path.join(CORE_DIR, "..", "claude-engineer", "instructions")
+        engineer_agents = os.path.join(CORE_DIR, "..", "claude-engineer", "agents")
+        rc, _, _, outputs = self._run({
+            "AGENT_NAME": "docs-engineer",
+            "EXTRA_INSTRUCTIONS_PATH": engineer_instructions,
+            "EXTRA_AGENTS_PATH": engineer_agents,
+        })
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # Base engineer instructions should be present
+        self.assertIn("Persistent Engineer Base", prompt)
+        self.assertIn("Dashboard Management", prompt)
+        # Agent-specific content should be present
+        self.assertIn("Documentation Engineer", prompt)
+        self.assertIn("README drift", prompt)
+
     def test_user_skill_overrides(self):
         """User skill overrides from WORKSPACE_PATH/.github/claude-skills/ should be included."""
         workspace = tempfile.mkdtemp()

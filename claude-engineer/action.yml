@@ -84,6 +84,7 @@ runs:
         app_private_key: ${{ inputs.app_private_key }}
         compose_prompt: "true"
         agent_name: ${{ inputs.agent_name }}
+        extra_instructions_path: ${{ github.action_path }}/instructions
         extra_agents_path: ${{ github.action_path }}/agents
         model: ${{ inputs.model }}
         max_turns: ${{ inputs.max_turns }}

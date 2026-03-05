@@ -62,6 +62,7 @@ jobs:
     if: needs.detect-intent.outputs.should_run == 'true'
     permissions:
       issues: write
+      pull-requests: write
     outputs:
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
     steps:

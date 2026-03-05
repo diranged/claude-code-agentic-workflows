@@ -224,6 +224,13 @@ class TestComposePrompt(unittest.TestCase):
         prompt = outputs.get("prompt", "")
         self.assertIn("Architect", prompt)
 
+    def test_loads_docs_engineer_agent(self):
+        """docs-engineer agent should load correctly."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "docs-engineer"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Documentation Engineer", prompt)
+
     def test_heredoc_output_format(self):
         """Output should use heredoc format with COMPOSED_EOF delimiter."""
         rc, _, _, outputs = self._run()

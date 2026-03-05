@@ -4,7 +4,7 @@ on:
   issue_comment:
     types: [created]
   issues:
-    types: [assigned]
+    types: [assigned, labeled]
 
 jobs:
   # Job 1: Determine if we should run and which agent to use
@@ -12,10 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       !github.event.issue.pull_request
-      && github.event.sender.type != 'Bot'
       && (
-        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+        (github.event_name == 'issue_comment'
+          && github.event.sender.type != 'Bot'
+          && contains(github.event.comment.body, '@claude'))
         || (github.event_name == 'issues' && github.event.action == 'assigned')
+        || (github.event_name == 'issues' && github.event.action == 'labeled'
+          && startsWith(github.event.label.name, 'claude:'))
       )
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
@@ -33,6 +36,7 @@ jobs:
         id: detect
         env:
           COMMENT_BODY: ${{ github.event.comment.body || '' }}
+          TRIGGER_LABEL: ${{ github.event.label.name || '' }}
         run: |
           echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
           echo "should_run=true" >> "$GITHUB_OUTPUT"

@@ -8,10 +8,11 @@ from helpers import run_script
 class TestDetectIntent(unittest.TestCase):
     """Tests for detect_intent.sh routing logic."""
 
-    def _run(self, comment_body):
-        """Run detect_intent.sh with COMMENT_BODY and return outputs dict."""
+    def _run(self, comment_body="", trigger_label=""):
+        """Run detect_intent.sh with COMMENT_BODY/TRIGGER_LABEL and return outputs dict."""
         rc, stdout, stderr, outputs = run_script(
-            "detect_intent.sh", {"COMMENT_BODY": comment_body}
+            "detect_intent.sh",
+            {"COMMENT_BODY": comment_body, "TRIGGER_LABEL": trigger_label},
         )
         self.assertEqual(rc, 0, f"Script failed: {stderr}")
         return outputs
@@ -162,6 +163,48 @@ class TestDetectIntent(unittest.TestCase):
     def test_mid_sentence(self):
         outputs = self._run("Can you @claude review the architecture?")
         self.assertEqual(outputs["agent"], "architect")
+
+    # --- label-based routing ---
+
+    def test_label_implement(self):
+        outputs = self._run(trigger_label="claude:implement")
+        self.assertEqual(outputs["agent"], "agentic-developer")
+        self.assertEqual(outputs["model"], "claude-sonnet-4-20250514")
+
+    def test_label_review(self):
+        outputs = self._run(trigger_label="claude:review")
+        self.assertEqual(outputs["agent"], "architect")
+        self.assertEqual(outputs["model"], "claude-opus-4-20250514")
+
+    def test_label_design(self):
+        outputs = self._run(trigger_label="claude:design")
+        self.assertEqual(outputs["agent"], "agentic-designer")
+        self.assertEqual(outputs["model"], "claude-opus-4-20250514")
+
+    def test_label_unknown_claude_prefix(self):
+        outputs = self._run(trigger_label="claude:something-else")
+        self.assertEqual(outputs["agent"], "agentic-designer")
+
+    def test_label_takes_priority_over_comment(self):
+        """Label routing should override comment body routing."""
+        outputs = self._run(
+            comment_body="@claude implement this",
+            trigger_label="claude:review",
+        )
+        self.assertEqual(outputs["agent"], "architect")
+
+    def test_non_claude_label_falls_through(self):
+        """Non-claude: labels should fall through to comment body routing."""
+        outputs = self._run(
+            comment_body="@claude implement",
+            trigger_label="bug",
+        )
+        self.assertEqual(outputs["agent"], "agentic-developer")
+
+    def test_empty_label_falls_through(self):
+        """Empty label should fall through to comment body routing."""
+        outputs = self._run(comment_body="@claude check performance")
+        self.assertEqual(outputs["agent"], "performance-reviewer")
 
 
 if __name__ == "__main__":

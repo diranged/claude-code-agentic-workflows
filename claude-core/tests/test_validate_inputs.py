@@ -149,7 +149,7 @@ class TestValidateInputs(unittest.TestCase):
             },
         )
         self.assertEqual(rc, 1)
-        self.assertIn("Agent 'nonexistent' not found in agents/ or .github/claude-agents/", stdout)
+        self.assertIn("Agent 'nonexistent' not found in agents/, extra_agents_path, or .github/claude-agents/", stdout)
 
     def test_succeeds_compose_with_valid_agent(self):
         rc, stdout, _, _ = run_script(
@@ -158,6 +158,26 @@ class TestValidateInputs(unittest.TestCase):
                 "OAUTH_TOKEN": "tok",
                 "COMPOSE_PROMPT": "true",
                 "AGENT_NAME": "agentic-designer",
+                "ACTION_PATH": self.temp_action_path,
+                "WORKSPACE_PATH": self.temp_workspace,
+            },
+        )
+        self.assertEqual(rc, 0)
+
+    def test_succeeds_agent_in_extra_path(self):
+        """Agent found via EXTRA_AGENTS_PATH should pass validation."""
+        extra_dir = tempfile.mkdtemp()
+        os.makedirs(os.path.join(extra_dir), exist_ok=True)
+        with open(os.path.join(extra_dir, "custom-engineer.md"), "w") as f:
+            f.write("# Test agent\n")
+
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {
+                "OAUTH_TOKEN": "tok",
+                "COMPOSE_PROMPT": "true",
+                "AGENT_NAME": "custom-engineer",
+                "EXTRA_AGENTS_PATH": extra_dir,
                 "ACTION_PATH": self.temp_action_path,
                 "WORKSPACE_PATH": self.temp_workspace,
             },

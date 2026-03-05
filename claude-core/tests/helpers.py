@@ -28,6 +28,7 @@ _CLEARED_VARS = [
     "ACTION_PATH",
     "WORKSPACE_PATH",
     "AGENT_NAME",
+    "EXTRA_AGENTS_PATH",
     "ISSUE_NUMBER",
     "COMMENT_ID",
     "RUN_ID",

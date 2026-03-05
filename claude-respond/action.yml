@@ -72,6 +72,9 @@ inputs:
   agent_name:
     description: "Agent to load from agents/ directory (e.g., 'agentic-designer')"
     required: false
+  extra_agents_path:
+    description: "Additional directory to search for agent definitions (checked before built-in agents)."
+    required: false
   compose_prompt:
     description: "Compose prompt from instructions/skills/agent (true/false)"
     required: false
@@ -122,6 +125,7 @@ runs:
         settings: ${{ inputs.settings }}
         prompt: ${{ inputs.prompt }}
         agent_name: ${{ inputs.agent_name }}
+        extra_agents_path: ${{ inputs.extra_agents_path }}
         compose_prompt: ${{ inputs.compose_prompt }}
         issue_comment_id: ${{ inputs.issue_comment_id }}
         display_report: ${{ inputs.display_report }}

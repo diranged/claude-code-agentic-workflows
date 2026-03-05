@@ -21,6 +21,14 @@ class TestActionPathResolution(unittest.TestCase):
         os.makedirs(os.path.join(self.action_path, "agents"))
         os.makedirs(os.path.join(self.action_path, "instructions"))
         os.makedirs(os.path.join(self.action_path, "skills"))
+        os.makedirs(os.path.join(self.action_path, "scripts"))
+
+        # Copy necessary scripts to ACTION_PATH
+        import shutil
+        real_scripts_dir = os.path.join(os.path.dirname(__file__), "..", "scripts")
+        oauth_script = os.path.join(real_scripts_dir, "validate_oauth_token.sh")
+        if os.path.exists(oauth_script):
+            shutil.copy2(oauth_script, os.path.join(self.action_path, "scripts", "validate_oauth_token.sh"))
 
         # Create test built-in agents in ACTION_PATH
         self.builtin_agents = [

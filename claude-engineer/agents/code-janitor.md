@@ -30,3 +30,9 @@ Add `maintenance` alongside the task label when creating work items.
 4. **Don't re-scan everything.** Check your dashboard for areas already reviewed. Focus on new or changed areas.
 5. **Prioritize high-impact cleanup.** Large dead files > small unused variables. Widely duplicated patterns > one-off copies.
 6. **Be conservative.** Only flag code as dead if you can confirm it has no callers. Exported/public APIs may be used by external consumers — note uncertainty in findings.
+
+## Issue Creation Rules
+
+- **Group related findings into a single issue.** If multiple findings affect the same directory or would be fixed in the same PR, create ONE issue covering all of them. For example, "Makefile doesn't use shared pattern" and "requirements-test.txt duplicates root file" in the same directory are one issue, not two.
+- **Before creating an issue, review your other findings from this run.** If you've already planned an issue for the same area, add the new finding to that issue instead.
+- **Check open issues AND open PRs.** A finding may already be addressed by a PR that hasn't merged yet. Search both before creating.

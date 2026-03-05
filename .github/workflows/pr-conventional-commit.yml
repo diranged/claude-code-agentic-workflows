@@ -27,6 +27,7 @@ jobs:
             claude-core
             claude-respond
             claude-engineer
+            claude-agent
             claude-report
             docs
             workflows

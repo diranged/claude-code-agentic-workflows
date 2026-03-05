@@ -4,9 +4,16 @@
 
 ## Overview
 
-This repository provides four reusable GitHub Actions composite actions that enable powerful Claude-powered automation in your workflows. The project creates a complete ecosystem for AI-driven development assistance, from interactive issue responses to autonomous engineering tasks.
+This repository provides five reusable GitHub Actions composite actions that enable powerful Claude-powered automation in your workflows. The project creates a complete ecosystem for AI-driven development assistance, from interactive issue responses to autonomous engineering tasks.
 
-The core actions include **claude-respond** (interactive assistant triggered by @claude mentions), **claude-core** (low-level execution wrapper for auth and prompt composition), **claude-engineer** (persistent autonomous engineer with dashboard management), and **claude-report** (execution summary and artifact upload). Together, these actions enable sophisticated AI workflows while maintaining clear separation of concerns.
+The core actions include:
+- **claude-respond** — Interactive assistant triggered by @claude mentions
+- **claude-core** — Low-level execution wrapper for auth and prompt composition
+- **claude-engineer** — Persistent autonomous engineer with dashboard management
+- **claude-agent** — Scheduled autonomous agent for proactive scanning and issue creation
+- **claude-report** — Execution summary and artifact upload
+
+Together, these actions enable sophisticated AI workflows while maintaining clear separation of concerns.
 
 Key differentiator: Claude Max subscribers can run these agents with no additional per-execution costs via OAuth authentication, making AI-powered workflows economically viable for regular use.
 
@@ -114,6 +121,23 @@ Wraps `claude-respond` with engineer-specific configuration for long-term autono
 
 📄 [Full specification](claude-engineer/action.yml)
 
+### claude-agent
+
+**Scheduled autonomous agent for proactive scanning and issue creation**
+
+Wraps `claude-respond` with agent-specific configuration and operational guardrails for scheduled autonomous operation.
+
+| Input | Description | Required |
+|-------|-------------|----------|
+| `agent_name` | Agent personality (e.g., 'security-auditor') | true |
+| `max_issues` | Maximum issues to create per run | false |
+| `issue_label` | Label for created issues | false |
+| `dry_run` | Analyze but do not create issues (true/false) | false |
+| `model` | Claude model | false |
+| `timeout_minutes` | Timeout in minutes | false |
+
+📄 [Full specification](claude-agent/action.yml)
+
 ### claude-report
 
 **Execution summary generator and artifact uploader**
@@ -148,6 +172,12 @@ Generates concise execution summaries and uploads Claude Code execution logs as 
 |-------|---------|
 | **docs-engineer** | Autonomous documentation maintenance engineer |
 
+### Agent-specific Agents (claude-agent/agents/)
+
+| Agent | Purpose |
+|-------|---------|
+| **security-auditor** | Scheduled security scanning and vulnerability detection |
+
 ### Customization
 
 Override built-in agents by placing custom definitions in `.github/claude-agents/<name>.md`. The system searches:
@@ -172,6 +202,9 @@ claude-code-agentic-workflows/
 ├── claude-engineer/      # Persistent engineer action
 │   ├── action.yml
 │   └── agents/           # Engineer-specific agents
+├── claude-agent/         # Scheduled agent action
+│   ├── action.yml
+│   └── agents/           # Agent-specific agents
 ├── claude-report/        # Execution summary action
 │   └── action.yml
 ├── scripts/              # Repo-level utility scripts
@@ -248,6 +281,36 @@ jobs:
           agent_name: "docs-engineer"
           dashboard_label: "claude-engineer:docs"
           task_label: "claude-engineer:docs-task"
+```
+
+### Scheduled Agent (Autonomous Scanning)
+
+Runs on a schedule for proactive issue detection:
+
+```yaml
+name: "Claude Security Agent"
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly on Mondays at 9am UTC
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Security Auditor
+        uses: diranged/claude-code-agentic-workflows/claude-agent@main
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          agent_name: "security-auditor"
+          max_issues: "5"
+          issue_label: "security:audit"
 ```
 
 ## Prompt Composition

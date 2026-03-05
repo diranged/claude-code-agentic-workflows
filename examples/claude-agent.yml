@@ -1,0 +1,98 @@
+# Claude Scheduled Agent
+#
+# This workflow demonstrates running a scheduled autonomous agent that proactively
+# scans the repository for issues and creates tracking issues. Agents run on
+# configurable schedules and include operational guardrails to prevent spam.
+#
+# Copy this file to .github/workflows/ and customize the configuration below.
+
+name: "Claude Scheduled Agent"
+
+on:
+  # Run weekly on Mondays at 9am UTC - adjust timing for your team's workflow
+  schedule:
+    - cron: '0 9 * * 1'
+
+  # Manual trigger with option to enable dry run mode
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry run mode (analyze but do not create issues)'
+        type: boolean
+        default: false
+      max_issues:
+        description: 'Maximum issues to create (1-10)'
+        type: number
+        default: 5
+
+jobs:
+  security-agent:
+    runs-on: ubuntu-latest
+    # Note: Production deployments often use self-hosted runners for performance
+    # and to handle the longer-running nature of autonomous agents
+
+    # Agents typically have read-only access by default for security,
+    # but can write to issues for scanning results and findings
+    permissions:
+      contents: read       # Read repository files and history
+      issues: write        # Create issues for findings and reports
+      id-token: write      # For OIDC authentication if needed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Security Auditor Agent
+        # Use @main for development, pin to a release tag for production (e.g., @v1)
+        uses: diranged/claude-code-agentic-workflows/claude-agent@main
+        with:
+          # Primary authentication - Claude Code OAuth token (recommended)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Alternative authentication - Anthropic API key (fallback option)
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Agent configuration
+          agent_name: "security-auditor"              # Built-in agent for security scanning
+          model: "claude-sonnet-4-20250514"         # Model optimized for analysis tasks
+
+          # Operational settings
+          max_issues: ${{ github.event.inputs.max_issues || '5' }}       # Limit issues per run
+          issue_label: "security:audit"              # Custom label for created issues
+          dry_run: ${{ github.event.inputs.dry_run || 'false' }}        # Dry run mode
+
+          # Execution limits
+          timeout_minutes: "45"                      # Timeout for safety
+          max_turns: "20"                           # Limit agentic turns
+
+          # Additional configuration options (uncomment as needed):
+          # allowed_tools: "Bash(*),Read,Glob,Grep,WebFetch,WebSearch"  # Tool permissions
+          # claude_args: "--memory-beta"             # Additional Claude CLI arguments
+
+# Adding more agents:
+#
+# To add additional agents, copy the job template below and customize:
+#
+# compliance-agent:
+#   runs-on: ubuntu-latest
+#   permissions:
+#     contents: read
+#     issues: write
+#     id-token: write
+#   steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+#
+#     - name: Run [Agent Name]
+#       uses: diranged/claude-code-agentic-workflows/claude-agent@main
+#       with:
+#         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+#         agent_name: "custom-agent-name"          # Your custom agent definition
+#         model: "claude-sonnet-4-20250514"
+#         max_issues: "3"
+#         issue_label: "compliance:check"
+#         dry_run: "false"
+#         timeout_minutes: "30"
+#
+# Note: Agents include operational guardrails to prevent duplicate issues and spam.
+# Each agent searches for existing issues with its label before creating new ones.

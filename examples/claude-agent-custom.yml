@@ -1,0 +1,154 @@
+# Claude Scheduled Agent - Custom Configuration
+#
+# This workflow demonstrates advanced configuration options for scheduled agents,
+# including multiple agents in one workflow, custom agent definitions, and various
+# operational settings. This example shows the full flexibility of the agent system.
+#
+# Copy this file to .github/workflows/ and customize for your specific needs.
+
+name: "Claude Agents - Custom Configuration"
+
+on:
+  # Multiple schedule options for different agent types
+  schedule:
+    - cron: '0 6 * * 1'   # Security agent weekly on Mondays at 6am UTC
+    - cron: '0 18 * * 5'  # Custom agent weekly on Fridays at 6pm UTC
+
+  # Manual trigger with full configuration options
+  workflow_dispatch:
+    inputs:
+      agent_type:
+        description: 'Which agent to run'
+        type: choice
+        options:
+          - 'security-auditor'
+          - 'custom-compliance'
+          - 'both'
+        default: 'both'
+      dry_run:
+        description: 'Run in dry run mode (analyze but do not create issues)'
+        type: boolean
+        default: true
+      max_issues_per_agent:
+        description: 'Maximum issues per agent (1-5)'
+        type: number
+        default: 3
+
+jobs:
+  # Built-in security agent with custom configuration
+  security-agent:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.agent_type == 'security-auditor' || github.event.inputs.agent_type == 'both' || github.event.schedule }}
+
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Security Auditor (Built-in Agent)
+        uses: diranged/claude-code-agentic-workflows/claude-agent@main
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Built-in agent from claude-agent/agents/
+          agent_name: "security-auditor"
+          model: "claude-sonnet-4-20250514"
+
+          # Custom operational settings
+          max_issues: ${{ github.event.inputs.max_issues_per_agent || '3' }}
+          issue_label: "security:vulnerability"      # Custom label prefix
+          dry_run: ${{ github.event.inputs.dry_run || 'false' }}
+
+          # Execution configuration
+          timeout_minutes: "30"
+          max_turns: "15"
+
+          # Tool restrictions for security scanning
+          allowed_tools: "Bash(find,grep,ls,cat,head,tail,wc),Read,Glob,Grep,WebFetch,WebSearch"
+
+          # Additional Claude CLI arguments
+          claude_args: |
+            --memory-beta
+            --verbose
+
+  # Custom agent using repository-local definition
+  custom-compliance-agent:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.agent_type == 'custom-compliance' || github.event.inputs.agent_type == 'both' || github.event.schedule }}
+
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # This step demonstrates using a custom agent definition
+      # Place your custom agent in .github/claude-agents/compliance-auditor.md
+      - name: Run Custom Compliance Agent
+        uses: diranged/claude-code-agentic-workflows/claude-agent@main
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Custom agent from .github/claude-agents/ (repository-local override)
+          # This will look for .github/claude-agents/compliance-auditor.md
+          agent_name: "compliance-auditor"
+          model: "claude-haiku-4-5-20251001"        # Lighter model for simple compliance checks
+
+          # Stricter operational settings for compliance
+          max_issues: ${{ github.event.inputs.max_issues_per_agent || '2' }}
+          issue_label: "compliance:policy-violation"
+          dry_run: ${{ github.event.inputs.dry_run || 'true' }}    # Default to dry run for compliance
+
+          # Conservative execution limits
+          timeout_minutes: "20"
+          max_turns: "10"
+
+          # Read-only tools for compliance scanning
+          allowed_tools: "Read,Glob,Grep,WebFetch,WebSearch"
+          disallowed_tools: "Bash,Edit,Write"       # Explicitly disable write operations
+
+# Agent Override Chain Example:
+#
+# This workflow demonstrates the agent override chain in action:
+#
+# 1. Repository-local: .github/claude-agents/compliance-auditor.md (highest priority)
+#    Create this file to define your custom compliance agent behavior
+#
+# 2. Action-specific: claude-agent/agents/security-auditor.md
+#    Built-in agents provided by the action (security-auditor is available)
+#
+# 3. Core agents: claude-core/agents/
+#    General-purpose agents (agentic-designer, docs-reviewer, etc.)
+#
+# 4. Inline prompt: prompt parameter (fallback)
+#    Direct prompt specification if no agent file is found
+#
+# Example custom agent file (.github/claude-agents/compliance-auditor.md):
+#
+# # Compliance Auditor Agent
+#
+# You are a compliance auditor specialized in organizational policy enforcement.
+#
+# ## Core Responsibilities
+# - Review code for compliance with internal security policies
+# - Check for sensitive data handling violations
+# - Validate documentation completeness
+# - Ensure proper licensing and attribution
+#
+# ## Operational Rules
+# - Be conservative in issue creation - only flag clear policy violations
+# - Include specific policy references in issue descriptions
+# - Suggest concrete remediation steps
+# - Use "compliance:policy-violation" label for all issues
+#
+# Remember: This workflow demonstrates advanced configuration. For basic usage,
+# see examples/claude-agent.yml

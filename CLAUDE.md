@@ -2,7 +2,7 @@
 
 ## Project
 
-GitHub Actions composite actions for agentic Claude Code workflows. This repository provides four reusable composite actions that enable sophisticated Claude-powered automation in GitHub workflows.
+GitHub Actions composite actions for agentic Claude Code workflows. This repository provides five reusable composite actions that enable sophisticated Claude-powered automation in GitHub workflows.
 
 **Key differentiator:** Claude Max subscribers can run these agents with no additional per-execution costs via OAuth authentication, making AI-powered workflows economically viable for regular use.
 
@@ -13,6 +13,7 @@ GitHub Actions composite actions for agentic Claude Code workflows. This reposit
 - **`claude-core/`** — Foundation composite action handling auth, argument composition, prompt composition, and Claude invocation
 - **`claude-respond/`** — Interactive assistant triggered by @claude mentions (wraps claude-core + claude-report)
 - **`claude-engineer/`** — Persistent autonomous engineer agents with dashboard management and task rotation
+- **`claude-agent/`** — Scheduled autonomous agent for proactive scanning and issue creation (wraps claude-respond)
 - **`claude-report/`** — Execution summary generator and artifact uploader for workflow transparency
 
 ### Directory Structure
@@ -28,6 +29,8 @@ claude-code-agentic-workflows/
 ├── claude-respond/       # Interactive assistant action
 ├── claude-engineer/      # Persistent engineer action
 │   └── agents/           # Engineer-specific agents (loaded via extra_agents_path)
+├── claude-agent/         # Scheduled agent action
+│   └── agents/           # Agent-specific agents (loaded via extra_agents_path)
 ├── claude-report/        # Execution summary action
 ├── scripts/              # Repo-level utility scripts
 ├── tests/                # Test suite
@@ -66,14 +69,26 @@ Dual-path authentication with OAuth preference:
 | Agent | Purpose | Dashboard Management |
 |-------|---------|---------------------|
 | `docs-engineer` | Autonomous documentation maintenance | Creates persistent dashboard issues, rotates tasks |
+| `code-janitor` | Repository cleanup and maintenance automation | Creates persistent dashboard issues, rotates tasks |
+
+### Agent-specific Agents (claude-agent/agents/)
+
+| Agent | Purpose | Typical Usage |
+|-------|---------|---------------|
+| `security-auditor` | Scheduled security scanning and vulnerability detection | Weekly security audits, compliance checks |
 
 ### Agent Customization
 
 **Override Chain:**
+
+The agent search path is action-specific based on the `extra_agents_path` input:
+
 1. Repository-local `.github/claude-agents/<name>.md` (highest priority)
-2. Built-in `claude-core/agents/`
-3. Built-in `claude-engineer/agents/`
-4. Inline `prompt` parameter (fallback)
+2. Action-specific agents directory:
+   - `claude-core/agents/` (for claude-respond using claude-core)
+   - `claude-engineer/agents/` (for claude-engineer runs)
+   - `claude-agent/agents/` (for claude-agent runs)
+3. Inline `prompt` parameter (fallback)
 
 This allows consuming repositories to customize agent behavior without modifying the actions themselves.
 
@@ -143,11 +158,13 @@ Engineer agents operate autonomously with dashboard management:
 - `claude-core/action.yml` — Core action with comprehensive inputs
 - `claude-respond/action.yml` — Interactive assistant wrapper
 - `claude-engineer/action.yml` — Persistent engineer wrapper
+- `claude-agent/action.yml` — Scheduled agent wrapper
 - `claude-report/action.yml` — Execution summary generator
 
 ### Agent Definitions
 - `claude-core/agents/` — 7 built-in agent personalities
-- `claude-engineer/agents/` — Engineer-specific agents (docs-engineer)
+- `claude-engineer/agents/` — Engineer-specific agents (docs-engineer, code-janitor)
+- `claude-agent/agents/` — Agent-specific agents (security-auditor)
 - `.github/claude-agents/` — Repository-local overrides (in consuming repos)
 
 ### Prompt Components

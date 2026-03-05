@@ -1,4 +1,26 @@
 #!/usr/bin/env bash
+
+# Workflow YAML Validator
+# Validates GitHub Actions workflow YAML files for syntax errors
+#
+# Usage:
+#   validate_workflows.sh [WORKFLOWS_DIR]
+#
+# Arguments:
+#   WORKFLOWS_DIR  - Path to workflows directory (default: .github/workflows)
+#
+# Environment Variables:
+#   PYTHON         - Python executable to use (default: python3)
+#
+# Exit Codes:
+#   0 - All workflow files passed YAML validation (or no files found)
+#   1 - One or more files failed YAML validation
+#
+# Example:
+#   validate_workflows.sh
+#   validate_workflows.sh /path/to/workflows
+#   PYTHON=python3.11 validate_workflows.sh
+
 set -euo pipefail
 
 WORKFLOWS_DIR="${1:-.github/workflows}"

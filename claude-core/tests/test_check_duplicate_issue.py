@@ -7,7 +7,6 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 
 class TestCheckDuplicateIssue(unittest.TestCase):
@@ -98,106 +97,148 @@ class TestCheckDuplicateIssue(unittest.TestCase):
         self.assertIn("duplicate=false", result.stdout)
         self.assertIn("existing_issue_number=", result.stdout)
 
-    @patch('subprocess.run')
-    def test_no_duplicate_issues(self, mock_run):
+    def test_no_duplicate_issues(self):
         """Test when no duplicate issues are found."""
-        # Mock curl to return empty array, but let python3 run normally
-        # Store the original subprocess.run function before patching
-        original_subprocess_run = subprocess.run
+        # Create a mock curl script that returns empty array
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_curl_path = Path(tmpdir) / "curl"
+            mock_curl_path.write_text('#!/bin/bash\necho "[]"\n')
+            mock_curl_path.chmod(0o755)
 
-        def side_effect(*args, **kwargs):
-            # Check if this is a curl call by looking at command args
-            command = args[0] if args else []
-            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
-                # Mock the curl call
-                mock_result = MagicMock()
-                mock_result.stdout = "[]"
-                mock_result.returncode = 0
-                return mock_result
-            # For all other calls (including python3, bash), run normally
-            return original_subprocess_run(*args, **kwargs)
+            # Override PATH to use our mock curl
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = "dashboard"
 
-        mock_run.side_effect = side_effect
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
 
-        returncode, stdout, stderr = self.run_script()
-        self.assertEqual(returncode, 0)
-        self.assertIn("duplicate=false", stdout)
-        self.assertIn("existing_issue_number=", stdout)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("duplicate=false", result.stdout)
+            self.assertIn("existing_issue_number=", result.stdout)
 
-    @patch('subprocess.run')
-    def test_duplicate_issue_found(self, mock_run):
+    def test_duplicate_issue_found(self):
         """Test when a duplicate issue is found."""
         # Mock curl to return issue array with one issue
         mock_issues = [{"number": 123, "title": "Existing Dashboard"}]
 
-        def side_effect(*args, **kwargs):
-            # Check if this is a curl call by looking at command args
-            command = args[0] if args else []
-            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
-                # Mock the curl call
-                mock_result = MagicMock()
-                mock_result.stdout = json.dumps(mock_issues)
-                mock_result.returncode = 0
-                return mock_result
-            # For all other calls (including python3, bash), run normally
-            return subprocess.run(*args, **kwargs)
+        # Create a mock curl script that returns issue array
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_curl_path = Path(tmpdir) / "curl"
+            mock_curl_path.write_text(f'#!/bin/bash\necho \'{json.dumps(mock_issues)}\'\n')
+            mock_curl_path.chmod(0o755)
 
-        mock_run.side_effect = side_effect
+            # Override PATH to use our mock curl
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = "dashboard"
 
-        returncode, stdout, stderr = self.run_script()
-        self.assertEqual(returncode, 0)
-        self.assertIn("duplicate=true", stdout)
-        self.assertIn("existing_issue_number=123", stdout)
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
 
-    @patch('subprocess.run')
-    def test_api_error_handling(self, mock_run):
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("duplicate=true", result.stdout)
+            self.assertIn("existing_issue_number=123", result.stdout)
+
+    def test_api_error_handling(self):
         """Test graceful handling of API errors."""
+        # Create a mock curl script that fails
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_curl_path = Path(tmpdir) / "curl"
+            mock_curl_path.write_text('#!/bin/bash\nexit 1\n')
+            mock_curl_path.chmod(0o755)
 
-        def side_effect(*args, **kwargs):
-            # Check if this is a curl call by looking at command args
-            command = args[0] if args else []
-            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
-                # Mock the curl call to fail
-                mock_result = MagicMock()
-                mock_result.stdout = ""
-                mock_result.returncode = 1
-                return mock_result
-            # For all other calls (including python3, bash), run normally
-            return subprocess.run(*args, **kwargs)
+            # Override PATH to use our mock curl
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = "dashboard"
 
-        mock_run.side_effect = side_effect
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
 
-        returncode, stdout, stderr = self.run_script()
-        self.assertEqual(returncode, 0)
-        self.assertIn("::warning::Failed to check for duplicate issues", stderr)
-        self.assertIn("duplicate=false", stdout)
-        self.assertIn("existing_issue_number=", stdout)
+            self.assertEqual(result.returncode, 0)
+            # When curl fails, the script uses fallback "[]" so it should succeed gracefully
+            self.assertIn("duplicate=false", result.stdout)
+            self.assertIn("existing_issue_number=", result.stdout)
 
-    @patch('subprocess.run')
-    def test_invalid_json_response(self, mock_run):
+    def test_empty_result_handling(self):
+        """Test handling when Python script returns empty result."""
+        # Create a mock python3 that succeeds but returns no output to trigger the warning path
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_python_path = Path(tmpdir) / "python3"
+            mock_python_path.write_text('#!/bin/bash\n# Return success but no output\nexit 0\n')
+            mock_python_path.chmod(0o755)
+
+            # Override PATH to use our mock python3
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = "dashboard"
+
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
+
+            self.assertEqual(result.returncode, 0)
+            # When python3 returns empty output, the script should issue a warning
+            self.assertIn("::warning::Failed to check for duplicate issues", result.stderr)
+            self.assertIn("duplicate=false", result.stdout)
+            self.assertIn("existing_issue_number=", result.stdout)
+
+    def test_invalid_json_response(self):
         """Test handling of invalid JSON response."""
+        # Create a mock curl script that returns invalid JSON
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_curl_path = Path(tmpdir) / "curl"
+            mock_curl_path.write_text('#!/bin/bash\necho "invalid json {"\n')
+            mock_curl_path.chmod(0o755)
 
-        def side_effect(*args, **kwargs):
-            # Check if this is a curl call by looking at command args
-            command = args[0] if args else []
-            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
-                # Mock the curl call to return invalid JSON
-                mock_result = MagicMock()
-                mock_result.stdout = "invalid json {"
-                mock_result.returncode = 0
-                return mock_result
-            # For all other calls (including python3, bash), run normally
-            return subprocess.run(*args, **kwargs)
+            # Override PATH to use our mock curl
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = "dashboard"
 
-        mock_run.side_effect = side_effect
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
 
-        returncode, stdout, stderr = self.run_script()
-        self.assertEqual(returncode, 0)
-        self.assertIn("duplicate=false", stdout)
-        self.assertIn("existing_issue_number=", stdout)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("duplicate=false", result.stdout)
+            self.assertIn("existing_issue_number=", result.stdout)
 
-    @patch('subprocess.run')
-    def test_multiple_issues_returns_first(self, mock_run):
+    def test_multiple_issues_returns_first(self):
         """Test that when multiple issues exist, the first one is returned."""
         # Mock curl to return multiple issues
         mock_issues = [
@@ -205,24 +246,30 @@ class TestCheckDuplicateIssue(unittest.TestCase):
             {"number": 456, "title": "Second Dashboard"}
         ]
 
-        def side_effect(*args, **kwargs):
-            # Check if this is a curl call by looking at command args
-            command = args[0] if args else []
-            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
-                # Mock the curl call
-                mock_result = MagicMock()
-                mock_result.stdout = json.dumps(mock_issues)
-                mock_result.returncode = 0
-                return mock_result
-            # For all other calls (including python3, bash), run normally
-            return subprocess.run(*args, **kwargs)
+        # Create a mock curl script that returns multiple issues
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_curl_path = Path(tmpdir) / "curl"
+            mock_curl_path.write_text(f'#!/bin/bash\necho \'{json.dumps(mock_issues)}\'\n')
+            mock_curl_path.chmod(0o755)
 
-        mock_run.side_effect = side_effect
+            # Override PATH to use our mock curl
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = "dashboard"
 
-        returncode, stdout, stderr = self.run_script()
-        self.assertEqual(returncode, 0)
-        self.assertIn("duplicate=true", stdout)
-        self.assertIn("existing_issue_number=123", stdout)  # First issue
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("duplicate=true", result.stdout)
+            self.assertIn("existing_issue_number=123", result.stdout)  # First issue
 
     def test_label_with_special_characters(self):
         """Test that labels with special characters are handled correctly."""

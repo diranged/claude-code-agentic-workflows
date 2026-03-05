@@ -31,7 +31,7 @@ This lets reviewers quickly navigate to the CI logs that produced the changes.
 - See the GitHub Environment instructions for API access details (gh CLI or curl fallback).
 - **Workflow files cannot be pushed** — the token lacks `workflows` permission. If the design requires `.github/workflows/` changes, exclude them from commits and note what's needed in the tracking comment.
 - Before writing code that requires external packages, verify they are available. Use `make test` which manages its own virtualenvs.
-- `make` may not be installed. If `make test` fails, run tests directly: `cd <dir> && python3 -m venv .venv && .venv/bin/pip install -r requirements-test.txt && .venv/bin/python3 -m unittest discover . -v`
+- `make` may not be installed. If `make test` fails, run tests directly: `cd <dir> && python3 -m venv .venv && .venv/bin/pip install -r ../requirements-test.txt && .venv/bin/python3 -m unittest discover . -v`
 
 ## Rules
 

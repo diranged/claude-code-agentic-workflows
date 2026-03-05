@@ -38,8 +38,8 @@ fi
 
 # --- Comment-based routing ---
 # No keyword matching — Claude figures out intent from the comment body.
-# Default to the developer agent (most capable, can read + write).
-agent="agentic-developer"
+# "auto" mode includes all agent definitions so Claude self-selects the right role.
+agent="auto"
 model="claude-sonnet-4-20250514"
 
 echo "agent=${agent}" >> "$GITHUB_OUTPUT"

@@ -364,6 +364,69 @@ class TestComposePrompt(unittest.TestCase):
         self.assertIn("User Override Agent", prompt)
         self.assertNotIn("Extra Path Agent", prompt)
 
+    # --- auto agent mode ---
+
+    def test_auto_includes_agent_catalog(self):
+        """auto mode should include all built-in agent definitions."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "auto"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Intelligent Agent Selection", prompt)
+        self.assertIn("Available Agents", prompt)
+        self.assertIn("Selection Instructions", prompt)
+
+    def test_auto_includes_all_builtin_agents(self):
+        """auto mode should include every built-in agent."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "auto"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        for agent_name in [
+            "Agentic Designer",
+            "Agentic Developer",
+            "Architect",
+            "Docs Reviewer",
+            "Janitor",
+            "Performance Reviewer",
+            "Test Coverage Reviewer",
+        ]:
+            with self.subTest(agent=agent_name):
+                self.assertIn(agent_name, prompt)
+
+    def test_auto_includes_extra_agents(self):
+        """auto mode should include agents from extra_agents_path."""
+        engineer_agents = os.path.join(CORE_DIR, "..", "claude-engineer", "agents")
+        rc, _, _, outputs = self._run({
+            "AGENT_NAME": "auto",
+            "EXTRA_AGENTS_PATH": engineer_agents,
+        })
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Documentation Engineer", prompt)
+        self.assertIn("Code Janitor", prompt)
+
+    def test_auto_user_override_deduplicates(self):
+        """User agent override should replace built-in in auto catalog."""
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-agents")
+        os.makedirs(override_dir)
+        with open(os.path.join(override_dir, "agentic-designer.md"), "w") as f:
+            f.write("# Agent: Custom Designer Override\n\nCustom behavior.\n")
+
+        rc, _, _, outputs = self._run({"AGENT_NAME": "auto"}, workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Custom Designer Override", prompt)
+        # Built-in designer content should NOT appear (user override takes priority)
+        self.assertNotIn("read-only architectural", prompt.lower())
+
+    def test_auto_includes_selection_instructions(self):
+        """auto mode should include instructions for Claude to self-select."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "auto"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Agentic Developer", prompt)
+        self.assertIn("most appropriate agent role", prompt)
+
     def test_heredoc_output_format(self):
         """Output should use heredoc format with COMPOSED_EOF delimiter."""
         rc, _, _, outputs = self._run()

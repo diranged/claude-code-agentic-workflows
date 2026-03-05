@@ -43,6 +43,35 @@ if [ "${COMPOSE_PROMPT:-}" = "true" ] && [ -n "${AGENT_NAME:-}" ]; then
   fi
 fi
 
+# 6. OAuth token expiry check (when OAuth token is provided)
+if [ -n "${OAUTH_TOKEN:-}" ]; then
+  "${ACTION_PATH}/scripts/validate_oauth_token.sh"
+fi
+
+# 7. max_turns must be a positive integer when set
+if [ -n "${MAX_TURNS:-}" ]; then
+  if ! [[ "$MAX_TURNS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "::error::max_turns must be a positive integer, got '${MAX_TURNS}'"
+    exit 1
+  fi
+fi
+
+# 8. model must start with 'claude-' when set
+if [ -n "${MODEL:-}" ]; then
+  if ! [[ "$MODEL" =~ ^claude- ]]; then
+    echo "::error::model must start with 'claude-', got '${MODEL}'"
+    exit 1
+  fi
+fi
+
+# 9. dry_run must be 'true', 'false', or empty
+if [ -n "${DRY_RUN:-}" ]; then
+  if [ "$DRY_RUN" != "true" ] && [ "$DRY_RUN" != "false" ]; then
+    echo "::error::dry_run must be 'true' or 'false', got '${DRY_RUN}'"
+    exit 1
+  fi
+fi
+
 # Auth method notice (preserved from validate_claude_auth.sh)
 if [ -n "${OAUTH_TOKEN:-}" ]; then
   echo "::notice::Using Claude Code OAuth token (subscription billing)"

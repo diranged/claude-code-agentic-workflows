@@ -224,6 +224,121 @@ class TestValidateInputs(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("API key", stdout)
 
+    # Max Turns Tests
+    def test_fails_max_turns_zero(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MAX_TURNS": "0"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("max_turns must be a positive integer, got '0'", stdout)
+
+    def test_fails_max_turns_negative(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MAX_TURNS": "-3"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("max_turns must be a positive integer, got '-3'", stdout)
+
+    def test_fails_max_turns_non_numeric(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MAX_TURNS": "abc"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("max_turns must be a positive integer, got 'abc'", stdout)
+
+    def test_fails_max_turns_decimal(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MAX_TURNS": "3.5"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("max_turns must be a positive integer, got '3.5'", stdout)
+
+    def test_succeeds_max_turns_valid(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MAX_TURNS": "10"},
+        )
+        self.assertEqual(rc, 0)
+
+    def test_succeeds_max_turns_empty(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MAX_TURNS": ""},
+        )
+        self.assertEqual(rc, 0)
+
+    # Model Format Tests
+    def test_fails_model_invalid_format(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MODEL": "gpt-4"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("model must start with 'claude-', got 'gpt-4'", stdout)
+
+    def test_fails_model_empty_string(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MODEL": ""},
+        )
+        self.assertEqual(rc, 0)  # Empty is allowed, should not fail
+
+    def test_succeeds_model_valid_format(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MODEL": "claude-sonnet-4"},
+        )
+        self.assertEqual(rc, 0)
+
+    def test_succeeds_model_complex_name(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "MODEL": "claude-sonnet-4-20250514"},
+        )
+        self.assertEqual(rc, 0)
+
+    # Dry Run Tests
+    def test_fails_dry_run_invalid_value(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": "yes"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("dry_run must be 'true' or 'false', got 'yes'", stdout)
+
+    def test_fails_dry_run_numeric(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": "1"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("dry_run must be 'true' or 'false', got '1'", stdout)
+
+    def test_succeeds_dry_run_true(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": "true"},
+        )
+        self.assertEqual(rc, 0)
+
+    def test_succeeds_dry_run_false(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": "false"},
+        )
+        self.assertEqual(rc, 0)
+
+    def test_succeeds_dry_run_empty(self):
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": ""},
+        )
+        self.assertEqual(rc, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

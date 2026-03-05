@@ -150,7 +150,7 @@ Engineer agents operate autonomously with dashboard management:
 ### CI/Runner Environment
 
 - **Self-hosted runner:** `diranged-claude-code`
-- **`gh` CLI may NOT be installed** — agents use curl fallback with `GITHUB_TOKEN`
+- **`gh` CLI is installed** via `dev-hanz-ops/install-gh-cli-action` in workflow steps
 - **`make` may not be installed** — agents use direct venv+unittest fallback
 - **GitHub token lacks `workflows` permission** — cannot push workflow files directly
 

@@ -116,7 +116,7 @@ Engineer agents operate autonomously with dashboard management:
 
 ### Code and Testing
 
-- Tests: `unittest` + `subprocess` pattern, each subdirectory has own `Makefile` + `requirements-test.txt`
+- Tests: `unittest` + `subprocess` pattern, each subdirectory has own `Makefile` + shared root-level `requirements-test.txt`
 - Root `make test` discovers all `*/Makefile` targets
 - Shell scripts in `claude-core/scripts/` are tested via Python subprocess helpers
 - `claude-respond/tests/test_action_yml.py` enforces input parity between claude-respond and claude-core

@@ -123,6 +123,27 @@ class TestComposePrompt(unittest.TestCase):
         prompt = outputs.get("prompt", "")
         self.assertNotIn("## Task Context", prompt)
 
+    def test_conventional_commit_config_auto_detected(self):
+        """Conventional commit workflow should be auto-detected and injected."""
+        workspace = tempfile.mkdtemp()
+        wf_dir = os.path.join(workspace, ".github", "workflows")
+        os.makedirs(wf_dir)
+        with open(os.path.join(wf_dir, "pr-check.yml"), "w") as f:
+            f.write("name: Check\nsteps:\n  - uses: amannn/action-semantic-pull-request@v5\n")
+
+        rc, _, _, outputs = self._run(workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Conventional Commit Configuration", prompt)
+        self.assertIn("semantic-pull-request", prompt)
+
+    def test_no_conventional_commit_when_absent(self):
+        """No conventional commit section when no checker workflow exists."""
+        rc, _, _, outputs = self._run()
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertNotIn("Conventional Commit Configuration", prompt)
+
     def test_user_instruction_overrides(self):
         """User instruction overrides from WORKSPACE_PATH/.github/claude-instructions/ should be included."""
         workspace = tempfile.mkdtemp()

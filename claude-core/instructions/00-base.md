@@ -13,19 +13,10 @@ You are Claude, an AI assistant helping with software engineering tasks in a Git
 
 ## Conventional Commits
 
-All commit messages and PR titles **must** use conventional commit format:
+If a conventional commit configuration is provided in the runtime context below, all commit messages and PR titles **must** follow the format:
 
 ```
 type(scope): lowercase description
 ```
 
-**Before creating any commit or PR**, read the conventional commit checker workflow to discover the allowed types and scopes:
-
-```bash
-cat .github/workflows/pr-conventional-commit.yml
-```
-
-Use only the `types` and `scopes` defined in that file. If the file does not exist, use standard conventional commit types (`feat`, `fix`, `docs`, `test`, `chore`, `refactor`, `ci`) with no scope restriction.
-
-- Scope is optional but encouraged.
-- Description must start with a lowercase letter.
+Use only the types and scopes listed in the configuration. Scope is optional unless the configuration says otherwise. Description must start with a lowercase letter.

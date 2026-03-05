@@ -95,6 +95,28 @@ if [ -n "${NOTIFY_OWNERS:-}" ]; then
 fi
 append_section "$CONTEXT"
 
+# --- 7b. Auto-detect conventional commit config from workspace workflows ---
+CC_CONFIG=""
+WORKFLOWS_DIR="${WORKSPACE_PATH}/.github/workflows"
+if [ -d "$WORKFLOWS_DIR" ]; then
+  for wf in "$WORKFLOWS_DIR"/*.yml "$WORKFLOWS_DIR"/*.yaml; do
+    [ -f "$wf" ] || continue
+    if grep -q -E "semantic-pull-request|conventional" "$wf" 2>/dev/null; then
+      CC_CONFIG="$(cat "$wf")"
+      break
+    fi
+  done
+fi
+if [ -n "$CC_CONFIG" ]; then
+  append_section "## Conventional Commit Configuration
+
+The following workflow enforces conventional commit formatting on PR titles. Your PR titles and commit messages **must** conform to the types and scopes defined here:
+
+\`\`\`yaml
+${CC_CONFIG}
+\`\`\`"
+fi
+
 # --- 8. User prompt ---
 if [ -n "${PROMPT_TEXT:-}" ]; then
   append_section "## Task Context

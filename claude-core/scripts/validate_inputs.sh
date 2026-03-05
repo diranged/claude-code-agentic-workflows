@@ -62,7 +62,8 @@ if [ "${COMPOSE_PROMPT:-}" = "true" ] && [ -z "${AGENT_NAME:-}" ]; then
 fi
 
 # 5. Agent file must exist (when compose_prompt=true and agent_name is set)
-if [ "${COMPOSE_PROMPT:-}" = "true" ] && [ -n "${AGENT_NAME:-}" ]; then
+# "auto" is a special routing mode — no agent file needed.
+if [ "${COMPOSE_PROMPT:-}" = "true" ] && [ -n "${AGENT_NAME:-}" ] && [ "${AGENT_NAME}" != "auto" ]; then
   USER_AGENT="${WORKSPACE_PATH:-.}/.github/claude-agents/${AGENT_NAME}.md"
   EXTRA_AGENT="${EXTRA_AGENTS_PATH:+${EXTRA_AGENTS_PATH}/${AGENT_NAME}.md}"
   BUILTIN_AGENT="${ACTION_PATH:-.}/agents/${AGENT_NAME}.md"

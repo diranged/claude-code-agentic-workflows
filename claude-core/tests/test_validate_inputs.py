@@ -184,6 +184,20 @@ class TestValidateInputs(unittest.TestCase):
         )
         self.assertEqual(rc, 0)
 
+    def test_succeeds_auto_agent(self):
+        """auto agent mode should pass validation without a file."""
+        rc, stdout, _, _ = run_script(
+            "validate_inputs.sh",
+            {
+                "OAUTH_TOKEN": "tok",
+                "COMPOSE_PROMPT": "true",
+                "AGENT_NAME": "auto",
+                "ACTION_PATH": self.temp_action_path,
+                "WORKSPACE_PATH": self.temp_workspace,
+            },
+        )
+        self.assertEqual(rc, 0)
+
     def test_succeeds_no_compose(self):
         rc, stdout, _, _ = run_script(
             "validate_inputs.sh",

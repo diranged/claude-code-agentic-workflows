@@ -47,32 +47,32 @@ class TestDetectIntent(unittest.TestCase):
         self.assertEqual(outputs["agent"], "architect")
 
     def test_non_claude_label_falls_through(self):
-        """Non-claude: labels should fall through to default."""
+        """Non-claude: labels should fall through to auto mode."""
         outputs = self._run(
             comment_body="@claude do something",
             trigger_label="bug",
         )
-        self.assertEqual(outputs["agent"], "agentic-developer")
+        self.assertEqual(outputs["agent"], "auto")
 
     def test_empty_label_falls_through(self):
-        """Empty label should fall through to default."""
+        """Empty label should fall through to auto mode."""
         outputs = self._run(comment_body="@claude check something")
-        self.assertEqual(outputs["agent"], "agentic-developer")
+        self.assertEqual(outputs["agent"], "auto")
 
-    # --- comment-based routing (always developer) ---
+    # --- comment-based routing (auto mode) ---
 
-    def test_comment_defaults_to_developer(self):
-        """Any @claude comment should route to the developer agent."""
+    def test_comment_defaults_to_auto(self):
+        """Any @claude comment should route to auto mode."""
         outputs = self._run("@claude rebase this")
-        self.assertEqual(outputs["agent"], "agentic-developer")
+        self.assertEqual(outputs["agent"], "auto")
         self.assertEqual(outputs["model"], "claude-sonnet-4-20250514")
 
-    def test_empty_body_defaults_to_developer(self):
+    def test_empty_body_defaults_to_auto(self):
         outputs = self._run("")
-        self.assertEqual(outputs["agent"], "agentic-developer")
+        self.assertEqual(outputs["agent"], "auto")
 
-    def test_any_comment_goes_to_developer(self):
-        """Claude figures out intent — no keyword matching."""
+    def test_any_comment_goes_to_auto(self):
+        """Claude self-selects the right agent — no keyword matching."""
         for comment in [
             "@claude review the architecture",
             "@claude fix the tests",
@@ -82,7 +82,7 @@ class TestDetectIntent(unittest.TestCase):
         ]:
             with self.subTest(comment=comment):
                 outputs = self._run(comment)
-                self.assertEqual(outputs["agent"], "agentic-developer")
+                self.assertEqual(outputs["agent"], "auto")
 
 
 if __name__ == "__main__":

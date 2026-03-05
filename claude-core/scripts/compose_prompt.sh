@@ -3,15 +3,16 @@
 #
 # Reads markdown files from:
 #   1. $ACTION_PATH/instructions/*.md  (sorted)
-#   2. $WORKSPACE_PATH/.github/claude-instructions/*.md  (user overrides, sorted)
-#   3. $ACTION_PATH/skills/*.md  (sorted)
-#   4. $WORKSPACE_PATH/.github/claude-skills/*.md  (user overrides, sorted)
-#   5. Agent file: user override or built-in
-#   6. Runtime context (run ID, issue number, etc.)
-#   7. PROMPT_TEXT as "Task Context"
+#   2. $EXTRA_INSTRUCTIONS_PATH/*.md  (extra instructions, sorted)
+#   3. $WORKSPACE_PATH/.github/claude-instructions/*.md  (user overrides, sorted)
+#   4. $ACTION_PATH/skills/*.md  (sorted)
+#   5. $WORKSPACE_PATH/.github/claude-skills/*.md  (user overrides, sorted)
+#   6. Agent file: user override, extra path, or built-in
+#   7. Runtime context (run ID, issue number, etc.)
+#   8. PROMPT_TEXT as "Task Context"
 #
 # Required env: ACTION_PATH, WORKSPACE_PATH, AGENT_NAME
-# Optional env: EXTRA_AGENTS_PATH, PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY, NOTIFY_OWNERS
+# Optional env: EXTRA_INSTRUCTIONS_PATH, EXTRA_AGENTS_PATH, PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY, NOTIFY_OWNERS
 set -euo pipefail
 
 PROMPT=""
@@ -37,16 +38,21 @@ load_dir() {
 # --- 1. Base instructions ---
 load_dir "${ACTION_PATH}/instructions"
 
-# --- 2. User instruction overrides ---
+# --- 2. Extra instructions (from caller, e.g. claude-engineer) ---
+if [ -n "${EXTRA_INSTRUCTIONS_PATH:-}" ]; then
+  load_dir "${EXTRA_INSTRUCTIONS_PATH}"
+fi
+
+# --- 3. User instruction overrides ---
 load_dir "${WORKSPACE_PATH}/.github/claude-instructions"
 
-# --- 3. Skills ---
+# --- 4. Skills ---
 load_dir "${ACTION_PATH}/skills"
 
-# --- 4. User skill overrides ---
+# --- 5. User skill overrides ---
 load_dir "${WORKSPACE_PATH}/.github/claude-skills"
 
-# --- 5. Agent definition ---
+# --- 6. Agent definition ---
 if [ -n "${AGENT_NAME:-}" ]; then
   AGENT_FILE=""
   USER_AGENT="${WORKSPACE_PATH}/.github/claude-agents/${AGENT_NAME}.md"
@@ -67,7 +73,7 @@ if [ -n "${AGENT_NAME:-}" ]; then
   append_section "$(cat "$AGENT_FILE")"
 fi
 
-# --- 6. Runtime context ---
+# --- 7. Runtime context ---
 CONTEXT="## Runtime Context"$'\n'
 if [ -n "${RUN_ID:-}" ]; then
   CONTEXT="${CONTEXT}- Run ID: ${RUN_ID}"$'\n'
@@ -89,7 +95,29 @@ if [ -n "${NOTIFY_OWNERS:-}" ]; then
 fi
 append_section "$CONTEXT"
 
-# --- 7. User prompt ---
+# --- 7b. Auto-detect conventional commit config from workspace workflows ---
+CC_CONFIG=""
+WORKFLOWS_DIR="${WORKSPACE_PATH}/.github/workflows"
+if [ -d "$WORKFLOWS_DIR" ]; then
+  for wf in "$WORKFLOWS_DIR"/*.yml "$WORKFLOWS_DIR"/*.yaml; do
+    [ -f "$wf" ] || continue
+    if grep -q -E "semantic-pull-request|conventional" "$wf" 2>/dev/null; then
+      CC_CONFIG="$(cat "$wf")"
+      break
+    fi
+  done
+fi
+if [ -n "$CC_CONFIG" ]; then
+  append_section "## Conventional Commit Configuration
+
+The following workflow enforces conventional commit formatting on PR titles. Your PR titles and commit messages **must** conform to the types and scopes defined here:
+
+\`\`\`yaml
+${CC_CONFIG}
+\`\`\`"
+fi
+
+# --- 8. User prompt ---
 if [ -n "${PROMPT_TEXT:-}" ]; then
   append_section "## Task Context
 ${PROMPT_TEXT}"

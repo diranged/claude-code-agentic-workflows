@@ -1,5 +1,34 @@
 #!/usr/bin/env bash
-# Unified input validation for claude-core composite action
+# Input Validator for claude-core Composite Action
+# Validates all required and conditional inputs before Claude execution begins.
+# Fails fast with actionable GitHub Actions error annotations.
+#
+# Usage:
+#   Called as the first step in the claude-core composite action to catch
+#   configuration errors before any expensive operations.
+#
+# Environment Variables:
+#   OAUTH_TOKEN      - Claude Code OAuth token (one of OAUTH_TOKEN or API_KEY required)
+#   API_KEY          - Anthropic API key (one of OAUTH_TOKEN or API_KEY required)
+#   APP_ID           - GitHub App ID (must be paired with APP_PRIVATE_KEY)
+#   APP_PRIVATE_KEY  - GitHub App private key (must be paired with APP_ID)
+#   TIMEOUT_MINUTES  - Execution timeout in minutes (must be a positive integer if set)
+#   COMPOSE_PROMPT   - Whether to compose a full prompt ("true"/"false")
+#   AGENT_NAME       - Agent personality name (required when COMPOSE_PROMPT=true)
+#   WORKSPACE_PATH   - Repository workspace root (for user agent overrides)
+#   ACTION_PATH      - Path to the claude-core action directory
+#   EXTRA_AGENTS_PATH - Additional agent search path (optional)
+#
+# Validations Performed:
+#   1. Auth: Either OAUTH_TOKEN or API_KEY must be provided
+#   2. App credentials: APP_ID and APP_PRIVATE_KEY must both be present or both absent
+#   3. Timeout: TIMEOUT_MINUTES must be a positive integer if set
+#   4. Compose prompt: AGENT_NAME is required when COMPOSE_PROMPT=true
+#   5. Agent file: Agent definition must exist in one of the search paths
+#
+# Exit Codes:
+#   0 - All validations passed
+#   1 - Validation failure (with ::error:: annotation describing the issue)
 set -euo pipefail
 
 # 1. Claude auth: either OAUTH_TOKEN or API_KEY must be non-empty

@@ -42,7 +42,7 @@ jobs:
 
       - name: Run Documentation Engineer
         # Use @main for development, pin to @v0 for production
-        uses: diranged/claude-code-agentic-workflows/claude-engineer@v0
+        uses: diranged/claude-code-agentic-workflows/claude-engineer@main
         with:
           # Primary authentication - Claude Code OAuth token (recommended)
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
@@ -83,7 +83,7 @@ jobs:
 #       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 #
 #     - name: Run [Engineer Name]
-#       uses: diranged/claude-code-agentic-workflows/claude-engineer@v0
+#       uses: diranged/claude-code-agentic-workflows/claude-engineer@main
 #       with:
 #         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
 #         agent_name: "custom-agent-name"        # Your custom agent definition

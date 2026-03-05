@@ -116,7 +116,7 @@ jobs:
 
       - name: Execute pipeline stage
         # Use @main for development, pin to @v0 for production
-        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
+        uses: diranged/claude-code-agentic-workflows/claude-respond@main
         with:
           # Primary authentication - Claude Code OAuth token (recommended)
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}

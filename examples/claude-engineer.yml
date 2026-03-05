@@ -1,0 +1,97 @@
+# Claude Engineer Agent
+#
+# This workflow demonstrates running a single persistent engineer agent that manages
+# its own dashboard of issues, rotates through tasks, and delegates complex work
+# to other agents. Engineers run on a schedule and maintain long-term context
+# about the repository.
+#
+# Copy this file to .github/workflows/ and customize the configuration below.
+
+name: "Claude Engineer Agent"
+
+on:
+  # Run daily at 8am UTC - adjust timing for your team's workflow
+  schedule:
+    - cron: '0 8 * * *'
+
+  # Manual trigger with option to force dashboard rotation
+  workflow_dispatch:
+    inputs:
+      force_rotation:
+        description: 'Force dashboard issue rotation for all engineers'
+        type: boolean
+        default: false
+
+jobs:
+  docs-engineer:
+    runs-on: ubuntu-latest
+    # Note: Production deployments often use self-hosted runners for performance
+    # and to handle the longer-running nature of engineer agents
+
+    # Engineers typically have read-only access by default for security,
+    # but can write to issues for task management and tracking
+    permissions:
+      contents: read       # Read repository files and history
+      issues: write        # Manage dashboard issues and task labels
+      pull-requests: read  # Review and analyze existing PRs
+      id-token: write      # For OIDC authentication if needed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Documentation Engineer
+        # Use @main for development, pin to a release tag for production (e.g., @v1)
+        uses: diranged/claude-code-agentic-workflows/claude-engineer@main
+        with:
+          # Primary authentication - Claude Code OAuth token (recommended)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Alternative authentication - Anthropic API key (fallback option)
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Agent configuration
+          agent_name: "docs-engineer"             # Built-in agent specializing in documentation
+          model: "claude-sonnet-4-20250514"      # Model optimized for documentation tasks
+
+          # Dashboard and task management
+          dashboard_label: "claude-engineer:docs"      # Label for engineer's dashboard issue
+          task_label: "claude-engineer:docs-task"      # Label for tracking generated tasks
+          delegation_label: "claude:design"           # Label for delegating complex work
+
+          # Dashboard rotation - engineers periodically review and update their dashboards
+          force_rotation: ${{ github.event.inputs.force_rotation || 'false' }}
+
+          # Additional configuration options (uncomment as needed):
+          # max_tokens: "8192"                    # Response length limit
+          # prompt_caching: "true"                # Enable prompt caching for efficiency
+          # append_artifacts: "true"              # Include run artifacts in summary
+
+# Adding more engineers:
+#
+# To add additional engineers, copy the job template below and customize:
+#
+# second-engineer:
+#   runs-on: ubuntu-latest
+#   permissions:
+#     contents: read
+#     issues: write
+#     pull-requests: read
+#     id-token: write
+#   steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+#
+#     - name: Run [Engineer Name]
+#       uses: diranged/claude-code-agentic-workflows/claude-engineer@main
+#       with:
+#         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+#         agent_name: "custom-agent-name"        # Your custom agent definition
+#         model: "claude-sonnet-4-20250514"
+#         dashboard_label: "claude-engineer:custom"
+#         task_label: "claude-engineer:custom-task"
+#         delegation_label: "claude:design"
+#         force_rotation: ${{ github.event.inputs.force_rotation || 'false' }}
+#
+# Note: The default allowed_tools for engineers is read-only ("Bash(find,grep,ls,cat,head,tail),Read,Glob,Grep,WebFetch,WebSearch")
+# If your engineer needs write permissions, add: allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"

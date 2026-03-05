@@ -1,0 +1,109 @@
+name: "Claude Agent"
+description: "Scheduled agent for autonomous scanning and issue creation. Wraps claude-respond with agent-specific configuration and operational guardrails."
+branding:
+  icon: "search"
+  color: "purple"
+
+inputs:
+  # Auth
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (from `claude setup-token`)."
+    required: false
+  anthropic_api_key:
+    description: "Anthropic API key."
+    required: false
+  github_token:
+    description: "GitHub token. Falls back to the workflow's GITHUB_TOKEN."
+    required: false
+  app_id:
+    description: "GitHub App ID for generating an installation token."
+    required: false
+  app_private_key:
+    description: "GitHub App private key (PEM format)."
+    required: false
+
+  # Agent configuration
+  agent_name:
+    description: "Agent personality to load (e.g., 'security-auditor')."
+    required: true
+  model:
+    description: "Claude model to use."
+    required: false
+    default: "claude-sonnet-4-20250514"
+  max_issues:
+    description: "Maximum issues to create per run."
+    required: false
+    default: "5"
+  issue_label:
+    description: "Label for created issues. Defaults to 'agent:<agent_name>'."
+    required: false
+  dry_run:
+    description: "Analyze but do not create issues (true/false)."
+    required: false
+    default: "false"
+
+  # Claude configuration
+  max_turns:
+    description: "Maximum agentic turns per invocation."
+    required: false
+  timeout_minutes:
+    description: "Timeout in minutes for the Claude Code process."
+    required: false
+    default: "60"
+  allowed_tools:
+    description: "Comma-separated list of allowed tools."
+    required: false
+    default: "Bash(*),Read,Glob,Grep,WebFetch,WebSearch"
+  disallowed_tools:
+    description: "Comma-separated list of disallowed tools."
+    required: false
+
+  # Advanced configuration
+  claude_args:
+    description: "Additional arguments passed directly to Claude CLI. Multiline supported."
+    required: false
+  settings:
+    description: "Claude Code settings as JSON string or path to settings JSON file."
+    required: false
+
+outputs:
+  execution_file:
+    description: "Path to the Claude Code execution output file"
+    value: ${{ steps.respond.outputs.execution_file }}
+  session_id:
+    description: "Claude Code session ID"
+    value: ${{ steps.respond.outputs.session_id }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Agent
+      id: respond
+      uses: diranged/claude-code-agentic-workflows/claude-respond@main
+      with:
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        github_token: ${{ inputs.github_token }}
+        app_id: ${{ inputs.app_id }}
+        app_private_key: ${{ inputs.app_private_key }}
+        compose_prompt: "true"
+        agent_name: ${{ inputs.agent_name }}
+        extra_agents_path: ${{ github.action_path }}/agents
+        model: ${{ inputs.model }}
+        max_turns: ${{ inputs.max_turns }}
+        timeout_minutes: ${{ inputs.timeout_minutes }}
+        allowed_tools: ${{ inputs.allowed_tools }}
+        disallowed_tools: ${{ inputs.disallowed_tools }}
+        claude_args: ${{ inputs.claude_args }}
+        settings: ${{ inputs.settings }}
+        prompt: |
+          Agent Configuration:
+          - Max issues per run: ${{ inputs.max_issues }}
+          - Issue label: ${{ inputs.issue_label || format('agent:{0}', inputs.agent_name) }}
+          - Dry run: ${{ inputs.dry_run }}
+
+          Operational Rules:
+          - Before creating any issue, search for existing open issues with the label to avoid duplicates.
+          - Do not create more than the max issues per run.
+          - Apply the configured label to every issue you create.
+          - If dry_run is true, report findings but do NOT create issues.

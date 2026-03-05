@@ -123,11 +123,21 @@ Engineer agents operate autonomously with dashboard management:
 
 ### Commits and PRs
 
-- **Use conventional commits** for all commit messages and PR titles
-  - Format: `type(scope): description` (e.g., `feat(core): add notify_owners input`)
-  - Types: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`, `ci`
-  - Scopes: `claude-core`, `claude-respond`, `claude-engineer`, `claude-report`, `docs`, `workflows`, `agents`
-- PRs use squash merge only
+- **Use conventional commits** for ALL commit messages and PR titles. This is enforced by CI.
+  - Format: `type(scope): description`
+  - The description (subject) MUST start with a lowercase letter
+  - **Before creating any commit or PR**, read `.github/workflows/pr-conventional-commit.yml` to discover the valid types and scopes. That file is the single source of truth — do not guess.
+- PRs use squash merge only — the PR title becomes the commit message, so it MUST be conventional
+
+### CI Checks — Reading and Fixing Failures
+
+- When asked to fix CI failures, **check ALL failing checks**, not just the test suite. Use `gh pr checks <PR_NUMBER>` or the GitHub API to list every check and its status.
+- The `check-title` job validates the PR title against conventional commit rules. If it fails, the PR title is wrong — fix it with:
+  ```bash
+  gh pr edit <PR_NUMBER> --title "type(scope): description"
+  ```
+- **Do not assume "CI is failing" means "tests are failing."** Read the actual check names and their output before deciding what to fix.
+- After pushing fixes, verify the push succeeded by running `git log origin/<branch> --oneline -1` and confirming your commit appears on the remote.
 
 ### Code and Testing
 

@@ -55,7 +55,7 @@ NOW=$(date +%s)
 # Check if token is expired
 if [ "$EXP" -lt "$NOW" ]; then
   EXPIRE_DATE=$(date -d "@$EXP" 2>/dev/null || echo "unknown date")
-  echo "::error::OAuth token has expired (expired at $EXPIRE_DATE). Run 'claude setup-token' to refresh."
+  echo "::error::OAuth token has expired (expired at $EXPIRE_DATE). Run 'claude setup-token' to refresh." >&2
   exit 1
 fi
 
@@ -63,5 +63,5 @@ fi
 FIVE_MINUTES_FROM_NOW=$((NOW + 300))
 if [ "$EXP" -lt "$FIVE_MINUTES_FROM_NOW" ]; then
   MINUTES_REMAINING=$(((EXP - NOW) / 60))
-  echo "::warning::OAuth token expires in $MINUTES_REMAINING minutes. Consider refreshing with 'claude setup-token'."
+  echo "::warning::OAuth token expires in $MINUTES_REMAINING minutes. Consider refreshing with 'claude setup-token'." >&2
 fi

@@ -4,17 +4,17 @@ set -euo pipefail
 
 # Required environment variables
 if [ -z "${GITHUB_TOKEN:-}" ]; then
-  echo "::error::GITHUB_TOKEN is required for duplicate issue detection"
+  echo "::error::GITHUB_TOKEN is required for duplicate issue detection" >&2
   exit 1
 fi
 
 if [ -z "${GITHUB_REPOSITORY:-}" ]; then
-  echo "::error::GITHUB_REPOSITORY is required for duplicate issue detection"
+  echo "::error::GITHUB_REPOSITORY is required for duplicate issue detection" >&2
   exit 1
 fi
 
 if [ -z "${DASHBOARD_LABEL:-}" ]; then
-  echo "::warning::No dashboard_label provided, skipping duplicate check"
+  echo "::warning::No dashboard_label provided, skipping duplicate check" >&2
   echo "duplicate=false"
   echo "existing_issue_number="
   exit 0
@@ -38,8 +38,8 @@ try:
         print('duplicate=false')
         print('existing_issue_number=')
 except Exception as e:
-    print('duplicate=false', file=sys.stderr)
-    print('existing_issue_number=', file=sys.stderr)
+    print('duplicate=false')
+    print('existing_issue_number=')
     print(f'Warning: Failed to parse API response: {e}', file=sys.stderr)
 " 2>/dev/null)
 
@@ -47,7 +47,7 @@ except Exception as e:
 if [ -n "$RESULT" ]; then
   echo "$RESULT"
 else
-  echo "::warning::Failed to check for duplicate issues, proceeding with creation"
+  echo "::warning::Failed to check for duplicate issues, proceeding with creation" >&2
   echo "duplicate=false"
   echo "existing_issue_number="
 fi

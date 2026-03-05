@@ -32,7 +32,7 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
         try:
             result = subprocess.run(
-                [str(self.script_path)],
+                ["bash", str(self.script_path)],
                 capture_output=True,
                 text=True,
                 env=env,
@@ -51,7 +51,7 @@ class TestCheckDuplicateIssue(unittest.TestCase):
         env["DASHBOARD_LABEL"] = "dashboard"
 
         result = subprocess.run(
-            [str(self.script_path)],
+            ["bash", str(self.script_path)],
             capture_output=True,
             text=True,
             env=env,
@@ -69,7 +69,7 @@ class TestCheckDuplicateIssue(unittest.TestCase):
         env["DASHBOARD_LABEL"] = "dashboard"
 
         result = subprocess.run(
-            [str(self.script_path)],
+            ["bash", str(self.script_path)],
             capture_output=True,
             text=True,
             env=env,
@@ -87,7 +87,7 @@ class TestCheckDuplicateIssue(unittest.TestCase):
             del env["DASHBOARD_LABEL"]
 
         result = subprocess.run(
-            [str(self.script_path)],
+            ["bash", str(self.script_path)],
             capture_output=True,
             text=True,
             env=env,
@@ -101,11 +101,23 @@ class TestCheckDuplicateIssue(unittest.TestCase):
     @patch('subprocess.run')
     def test_no_duplicate_issues(self, mock_run):
         """Test when no duplicate issues are found."""
-        # Mock curl to return empty array
-        mock_result = MagicMock()
-        mock_result.stdout = "[]"
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+        # Mock curl to return empty array, but let python3 run normally
+        # Store the original subprocess.run function before patching
+        original_subprocess_run = subprocess.run
+
+        def side_effect(*args, **kwargs):
+            # Check if this is a curl call by looking at command args
+            command = args[0] if args else []
+            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
+                # Mock the curl call
+                mock_result = MagicMock()
+                mock_result.stdout = "[]"
+                mock_result.returncode = 0
+                return mock_result
+            # For all other calls (including python3, bash), run normally
+            return original_subprocess_run(*args, **kwargs)
+
+        mock_run.side_effect = side_effect
 
         returncode, stdout, stderr = self.run_script()
         self.assertEqual(returncode, 0)
@@ -117,10 +129,20 @@ class TestCheckDuplicateIssue(unittest.TestCase):
         """Test when a duplicate issue is found."""
         # Mock curl to return issue array with one issue
         mock_issues = [{"number": 123, "title": "Existing Dashboard"}]
-        mock_result = MagicMock()
-        mock_result.stdout = json.dumps(mock_issues)
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+
+        def side_effect(*args, **kwargs):
+            # Check if this is a curl call by looking at command args
+            command = args[0] if args else []
+            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
+                # Mock the curl call
+                mock_result = MagicMock()
+                mock_result.stdout = json.dumps(mock_issues)
+                mock_result.returncode = 0
+                return mock_result
+            # For all other calls (including python3, bash), run normally
+            return subprocess.run(*args, **kwargs)
+
+        mock_run.side_effect = side_effect
 
         returncode, stdout, stderr = self.run_script()
         self.assertEqual(returncode, 0)
@@ -130,11 +152,20 @@ class TestCheckDuplicateIssue(unittest.TestCase):
     @patch('subprocess.run')
     def test_api_error_handling(self, mock_run):
         """Test graceful handling of API errors."""
-        # Mock curl to fail
-        mock_result = MagicMock()
-        mock_result.stdout = ""
-        mock_result.returncode = 1
-        mock_run.return_value = mock_result
+
+        def side_effect(*args, **kwargs):
+            # Check if this is a curl call by looking at command args
+            command = args[0] if args else []
+            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
+                # Mock the curl call to fail
+                mock_result = MagicMock()
+                mock_result.stdout = ""
+                mock_result.returncode = 1
+                return mock_result
+            # For all other calls (including python3, bash), run normally
+            return subprocess.run(*args, **kwargs)
+
+        mock_run.side_effect = side_effect
 
         returncode, stdout, stderr = self.run_script()
         self.assertEqual(returncode, 0)
@@ -145,11 +176,20 @@ class TestCheckDuplicateIssue(unittest.TestCase):
     @patch('subprocess.run')
     def test_invalid_json_response(self, mock_run):
         """Test handling of invalid JSON response."""
-        # Mock curl to return invalid JSON
-        mock_result = MagicMock()
-        mock_result.stdout = "invalid json {"
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+
+        def side_effect(*args, **kwargs):
+            # Check if this is a curl call by looking at command args
+            command = args[0] if args else []
+            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
+                # Mock the curl call to return invalid JSON
+                mock_result = MagicMock()
+                mock_result.stdout = "invalid json {"
+                mock_result.returncode = 0
+                return mock_result
+            # For all other calls (including python3, bash), run normally
+            return subprocess.run(*args, **kwargs)
+
+        mock_run.side_effect = side_effect
 
         returncode, stdout, stderr = self.run_script()
         self.assertEqual(returncode, 0)
@@ -164,10 +204,20 @@ class TestCheckDuplicateIssue(unittest.TestCase):
             {"number": 123, "title": "First Dashboard"},
             {"number": 456, "title": "Second Dashboard"}
         ]
-        mock_result = MagicMock()
-        mock_result.stdout = json.dumps(mock_issues)
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+
+        def side_effect(*args, **kwargs):
+            # Check if this is a curl call by looking at command args
+            command = args[0] if args else []
+            if isinstance(command, list) and len(command) > 0 and 'curl' in command[0]:
+                # Mock the curl call
+                mock_result = MagicMock()
+                mock_result.stdout = json.dumps(mock_issues)
+                mock_result.returncode = 0
+                return mock_result
+            # For all other calls (including python3, bash), run normally
+            return subprocess.run(*args, **kwargs)
+
+        mock_run.side_effect = side_effect
 
         returncode, stdout, stderr = self.run_script()
         self.assertEqual(returncode, 0)

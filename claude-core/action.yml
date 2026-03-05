@@ -99,6 +99,10 @@ inputs:
     description: "Show the full Claude Code Report in GitHub Job Summary."
     required: false
     default: "true"
+  dry_run:
+    description: "Validate inputs and compose prompts without invoking Claude (true/false)."
+    required: false
+    default: "false"
 
 outputs:
   execution_file:
@@ -129,6 +133,9 @@ runs:
         EXTRA_AGENTS_PATH: ${{ inputs.extra_agents_path }}
         ACTION_PATH: ${{ github.action_path }}
         WORKSPACE_PATH: ${{ github.workspace }}
+        MAX_TURNS: ${{ inputs.max_turns }}
+        MODEL: ${{ inputs.model }}
+        DRY_RUN: ${{ inputs.dry_run }}
 
     # Step 2: Generate GitHub App token if App credentials provided
     - name: Generate GitHub App Token
@@ -186,10 +193,40 @@ runs:
         RUN_ID: ${{ github.run_id }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         NOTIFY_OWNERS: ${{ inputs.notify_owners }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
 
-    # Step 7: Invoke upstream claude-code-action
+    # Step 7: Dry Run Summary (if dry_run is enabled)
+    - name: Dry Run Summary
+      if: inputs.dry_run == 'true'
+      shell: bash
+      run: |
+        echo "## Dry Run Summary" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "### Auth Method" >> "$GITHUB_STEP_SUMMARY"
+        if [ -n "${OAUTH_TOKEN:-}" ]; then
+          echo "OAuth (subscription billing)" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "API Key (per-token billing)" >> "$GITHUB_STEP_SUMMARY"
+        fi
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "### Claude Args" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        echo "${CLAUDE_ARGS:-}" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "### Composed Prompt (first 500 chars)" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        echo "${PROMPT:0:500}" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+      env:
+        OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        CLAUDE_ARGS: ${{ steps.build-args.outputs.args }}
+        PROMPT: ${{ inputs.compose_prompt == 'true' && steps.compose-prompt.outputs.prompt || steps.build-prompt.outputs.prompt }}
+
+    # Step 8: Invoke upstream claude-code-action
     - name: Run Claude Code
       id: claude
+      if: inputs.dry_run != 'true'
       uses: anthropics/claude-code-action@e763fe78de2db7389e04818a00b5ff8ba13d1360 # v1
       with:
         allowed_bots: ${{ inputs.allowed_bots }}

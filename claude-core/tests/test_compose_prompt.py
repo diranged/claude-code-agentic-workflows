@@ -433,6 +433,127 @@ class TestComposePrompt(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("prompt", outputs)
 
+    # Edge case tests
+    def test_empty_user_override_dirs(self):
+        """Empty user override directories should not cause failures."""
+        workspace = tempfile.mkdtemp()
+        # Create empty directories
+        os.makedirs(os.path.join(workspace, ".github", "claude-instructions"))
+        os.makedirs(os.path.join(workspace, ".github", "claude-skills"))
+        os.makedirs(os.path.join(workspace, ".github", "claude-agents"))
+
+        rc, _, _, outputs = self._run({"AGENT_NAME": "agentic-designer"}, workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # Should still load built-in content
+        self.assertIn("Base Instructions", prompt)
+        self.assertIn("Agentic Designer", prompt)
+
+    def test_non_md_files_ignored_in_instructions(self):
+        """Non-.md files in instruction directories should be ignored."""
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-instructions")
+        os.makedirs(override_dir)
+        # Create a non-.md file
+        with open(os.path.join(override_dir, "config.txt"), "w") as f:
+            f.write("This should not be included\n")
+        # Create a .md file
+        with open(os.path.join(override_dir, "00-custom.md"), "w") as f:
+            f.write("# Custom Instructions\nThis should be included.\n")
+
+        rc, _, _, outputs = self._run(workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Custom Instructions", prompt)
+        self.assertNotIn("This should not be included", prompt)
+
+    def test_non_md_files_ignored_in_skills(self):
+        """Non-.md files in skills directories should be ignored."""
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-skills")
+        os.makedirs(override_dir)
+        # Create a non-.md file
+        with open(os.path.join(override_dir, "script.py"), "w") as f:
+            f.write("print('Not a skill')\n")
+        # Create a .md file
+        with open(os.path.join(override_dir, "custom-skill.md"), "w") as f:
+            f.write("# Skill: Custom\nCustom skill content.\n")
+
+        rc, _, _, outputs = self._run(workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Custom skill content", prompt)
+        self.assertNotIn("Not a skill", prompt)
+
+    def test_prompt_text_with_special_characters(self):
+        """PROMPT_TEXT with special characters should be handled correctly."""
+        special_prompt = "Fix the `login` bug in $HOME/app.py with \"quotes\" and 'apostrophes'"
+        rc, _, _, outputs = self._run({"PROMPT_TEXT": special_prompt})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("login", prompt)
+        self.assertIn("$HOME/app.py", prompt)
+        self.assertIn('"quotes"', prompt)
+        self.assertIn("'apostrophes'", prompt)
+
+    def test_multiline_prompt_text(self):
+        """PROMPT_TEXT with newlines should be preserved correctly."""
+        multiline_prompt = "Line 1: Fix the bug\nLine 2: Run the tests\nLine 3: Update docs"
+        rc, _, _, outputs = self._run({"PROMPT_TEXT": multiline_prompt})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Line 1: Fix the bug", prompt)
+        self.assertIn("Line 2: Run the tests", prompt)
+        self.assertIn("Line 3: Update docs", prompt)
+
+    def test_missing_workspace_subdirs(self):
+        """Missing .github/ subdirectories in workspace should not cause failures."""
+        workspace = tempfile.mkdtemp()
+        # Don't create any .github/ subdirectories
+
+        rc, _, _, outputs = self._run(workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # Should still load built-in content
+        self.assertIn("Base Instructions", prompt)
+
+    def test_agent_file_empty(self):
+        """Empty agent files should be handled gracefully."""
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-agents")
+        os.makedirs(override_dir)
+        # Create empty agent file
+        with open(os.path.join(override_dir, "empty-agent.md"), "w") as f:
+            f.write("")  # Completely empty
+
+        rc, _, _, outputs = self._run({"AGENT_NAME": "empty-agent"}, workspace=workspace)
+        self.assertEqual(rc, 0)
+        # Should succeed even with empty agent content
+
+    def test_agent_file_with_unicode(self):
+        """Agent files with Unicode characters should be handled correctly."""
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-agents")
+        os.makedirs(override_dir)
+        with open(os.path.join(override_dir, "unicode-agent.md"), "w", encoding="utf-8") as f:
+            f.write("# Agent: Unicode Test\n\n你好 🌍 Café naïve résumé\n")
+
+        rc, _, _, outputs = self._run({"AGENT_NAME": "unicode-agent"}, workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Unicode Test", prompt)
+        self.assertIn("你好", prompt)
+        self.assertIn("🌍", prompt)
+
+    def test_prompt_with_heredoc_delimiter(self):
+        """PROMPT_TEXT containing heredoc delimiter should not break output."""
+        problem_prompt = "Use this code:\nCOMPOSED_EOF\necho 'test'"
+        rc, _, _, outputs = self._run({"PROMPT_TEXT": problem_prompt})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("COMPOSED_EOF", prompt)
+        self.assertIn("echo 'test'", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

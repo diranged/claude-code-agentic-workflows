@@ -99,6 +99,10 @@ inputs:
     description: "Show the full Claude Code Report in GitHub Job Summary."
     required: false
     default: "true"
+  dry_run:
+    description: "Validate inputs and compose prompts without invoking Claude (true/false)."
+    required: false
+    default: "false"
 
 outputs:
   execution_file:
@@ -144,6 +148,7 @@ runs:
         issue_comment_id: ${{ inputs.issue_comment_id }}
         notify_owners: ${{ inputs.notify_owners }}
         display_report: ${{ inputs.display_report }}
+        dry_run: ${{ inputs.dry_run }}
 
     # Step 2: Generate report and upload artifact
     - name: Generate Report

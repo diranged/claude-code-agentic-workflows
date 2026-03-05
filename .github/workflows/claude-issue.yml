@@ -23,22 +23,20 @@ jobs:
       model: ${{ steps.detect.outputs.model }}
       issue_number: ${{ steps.detect.outputs.issue_number }}
     steps:
+      - name: Checkout intent detection script
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: claude-core/scripts/
+          sparse-checkout-cone-mode: false
+
       - name: Detect intent
         id: detect
         env:
           COMMENT_BODY: ${{ github.event.comment.body || '' }}
         run: |
           echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
-
-          if [[ "$COMMENT_BODY" == *"@claude implement"* ]]; then
-            echo "agent=agentic-developer" >> "$GITHUB_OUTPUT"
-            echo "model=claude-sonnet-4-20250514" >> "$GITHUB_OUTPUT"
-          else
-            echo "agent=agentic-designer" >> "$GITHUB_OUTPUT"
-            echo "model=claude-opus-4-20250514" >> "$GITHUB_OUTPUT"
-          fi
-
           echo "should_run=true" >> "$GITHUB_OUTPUT"
+          bash claude-core/scripts/detect_intent.sh
         shell: bash
 
   # Job 2: React to the trigger and create a tracking comment

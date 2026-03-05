@@ -189,6 +189,41 @@ class TestComposePrompt(unittest.TestCase):
         self.assertGreater(agent_pos, -1)
         self.assertLess(skills_pos, agent_pos)
 
+    def test_loads_janitor_agent(self):
+        """janitor agent should load correctly."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "janitor"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Janitor", prompt)
+
+    def test_loads_performance_reviewer_agent(self):
+        """performance-reviewer agent should load correctly."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "performance-reviewer"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Performance Reviewer", prompt)
+
+    def test_loads_docs_reviewer_agent(self):
+        """docs-reviewer agent should load correctly."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "docs-reviewer"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Docs Reviewer", prompt)
+
+    def test_loads_test_coverage_agent(self):
+        """test-coverage agent should load correctly."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "test-coverage"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Test Coverage Reviewer", prompt)
+
+    def test_loads_architect_agent(self):
+        """architect agent should load correctly."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "architect"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Architect", prompt)
+
     def test_heredoc_output_format(self):
         """Output should use heredoc format with COMPOSED_EOF delimiter."""
         rc, _, _, outputs = self._run()

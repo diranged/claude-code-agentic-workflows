@@ -29,4 +29,5 @@ jobs:
           model: "claude-sonnet-4-20250514"
           dashboard_label: "claude-engineer:docs"
           task_label: "claude-engineer:docs-task"
+          delegation_label: "claude:design"
           force_rotation: ${{ github.event.inputs.force_rotation || 'false' }}

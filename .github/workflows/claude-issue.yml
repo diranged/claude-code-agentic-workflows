@@ -102,6 +102,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
           assignee_trigger: "claude"
+          label_trigger: "claude"
+          allowed_bots: "claude[bot]"
+          notify_owners: "diranged"
           compose_prompt: "true"
           agent_name: ${{ needs.detect-intent.outputs.agent }}
           model: ${{ needs.detect-intent.outputs.model }}

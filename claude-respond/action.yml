@@ -24,6 +24,12 @@ inputs:
     description: "GitHub App private key (PEM format) for generating an installation token."
     required: false
 
+  # Bot configuration
+  allowed_bots:
+    description: "Comma-separated list of allowed bot usernames, or '*' to allow all bots. Empty (default) allows no bots."
+    required: false
+    default: ""
+
   # Trigger configuration
   trigger_phrase:
     description: "Phrase that triggers Claude in comments."
@@ -82,6 +88,9 @@ inputs:
   issue_comment_id:
     description: "Tracking comment ID for progress updates"
     required: false
+  notify_owners:
+    description: "Comma-separated GitHub usernames to assign when the agent needs human input."
+    required: false
 
   display_report:
     description: "Show the full Claude Code Report in GitHub Job Summary."
@@ -112,6 +121,7 @@ runs:
         github_token: ${{ inputs.github_token }}
         app_id: ${{ inputs.app_id }}
         app_private_key: ${{ inputs.app_private_key }}
+        allowed_bots: ${{ inputs.allowed_bots }}
         trigger_phrase: ${{ inputs.trigger_phrase }}
         assignee_trigger: ${{ inputs.assignee_trigger }}
         label_trigger: ${{ inputs.label_trigger }}
@@ -128,6 +138,7 @@ runs:
         extra_agents_path: ${{ inputs.extra_agents_path }}
         compose_prompt: ${{ inputs.compose_prompt }}
         issue_comment_id: ${{ inputs.issue_comment_id }}
+        notify_owners: ${{ inputs.notify_owners }}
         display_report: ${{ inputs.display_report }}
 
     # Step 2: Generate report and upload artifact

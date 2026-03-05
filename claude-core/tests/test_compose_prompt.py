@@ -92,6 +92,13 @@ class TestComposePrompt(unittest.TestCase):
         self.assertIn("Run ID: 99999", prompt)
         self.assertIn("https://github.com/test/repo/actions/runs/99999", prompt)
 
+    def test_runtime_context_notify_owners(self):
+        """Notify Owners should appear in runtime context when set."""
+        rc, _, _, outputs = self._run({"NOTIFY_OWNERS": "alice,bob"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Notify Owners: alice,bob", prompt)
+
     def test_runtime_context_omits_empty_vars(self):
         """Runtime context should not include lines for empty vars."""
         rc, _, _, outputs = self._run()
@@ -99,6 +106,7 @@ class TestComposePrompt(unittest.TestCase):
         prompt = outputs.get("prompt", "")
         self.assertNotIn("Issue Number:", prompt)
         self.assertNotIn("Tracking Comment ID:", prompt)
+        self.assertNotIn("Notify Owners:", prompt)
 
     def test_prompt_text_appended_as_task_context(self):
         """PROMPT_TEXT should appear under '## Task Context'."""

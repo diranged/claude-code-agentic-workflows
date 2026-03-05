@@ -11,7 +11,7 @@
 #   7. PROMPT_TEXT as "Task Context"
 #
 # Required env: ACTION_PATH, WORKSPACE_PATH, AGENT_NAME
-# Optional env: EXTRA_AGENTS_PATH, PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY
+# Optional env: EXTRA_AGENTS_PATH, PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY, NOTIFY_OWNERS
 set -euo pipefail
 
 PROMPT=""
@@ -83,6 +83,9 @@ if [ -n "${COMMENT_ID:-}" ]; then
 fi
 if [ -n "${GITHUB_REPOSITORY:-}" ]; then
   CONTEXT="${CONTEXT}- Repository: ${GITHUB_REPOSITORY}"$'\n'
+fi
+if [ -n "${NOTIFY_OWNERS:-}" ]; then
+  CONTEXT="${CONTEXT}- Notify Owners: ${NOTIFY_OWNERS}"$'\n'
 fi
 append_section "$CONTEXT"
 

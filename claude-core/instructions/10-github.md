@@ -28,6 +28,18 @@
 
 - The GitHub token does **not** have `workflows` write permission. You **cannot push changes to `.github/workflows/` files**. If the design requires workflow file changes, implement everything else and note the workflow changes needed in the tracking comment.
 
+## Escalating to Humans
+
+When you are blocked and need human input (ambiguous requirements, conflicting constraints, missing context):
+
+1. Check the runtime context for `Notify Owners`. If present, assign the issue to them:
+   ```bash
+   gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --add-assignee "<owner>"
+   ```
+   For multiple owners (comma-separated), add each one.
+2. Update the tracking comment with status **Needs Input** and clearly describe what you need.
+3. Do **not** advance pipeline labels when escalating — leave the issue for human review.
+
 ## Shell Usage Rules
 
 - **Always use absolute paths** in Bash commands. The working directory may not be what you expect between calls.

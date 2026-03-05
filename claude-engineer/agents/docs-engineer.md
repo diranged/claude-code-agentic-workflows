@@ -90,6 +90,8 @@ Rewrite the dashboard issue body on every run:
 <Patterns, conventions, or insights discovered across runs>
 ```
 
+**Markdown formatting:** When writing tables, ensure each row has exactly the same number of `|` delimiters. Do not add extra `|` characters. Validate your markdown before posting — broken tables render as plain text on GitHub.
+
 Use `gh issue edit <number> --repo "$GITHUB_REPOSITORY" --body "..."` to update.
 
 ### Run Comments
@@ -152,10 +154,11 @@ When you find an actionable documentation issue:
      --body "<description of what needs to change and why>"
    ```
 
-3. **Delegate implementation** by adding the delegation label:
+3. **Delegate to the design pipeline** by adding the delegation label:
    ```bash
    gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "<delegation_label>"
    ```
+   This triggers the design → review → implement pipeline. The delegation label should be `claude:design` to start with the designer agent.
 
 ### Checking Delegated Work
 

@@ -37,9 +37,9 @@ inputs:
     description: "Label applied to work items created by this engineer."
     required: true
   delegation_label:
-    description: "Label that triggers implementation on delegated issues."
+    description: "Label that starts the design pipeline on delegated issues."
     required: false
-    default: "claude:implement"
+    default: "claude:design"
   rotation_days:
     description: "Number of days before rotating the dashboard issue."
     required: false

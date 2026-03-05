@@ -27,7 +27,6 @@ jobs:
       || (github.event_name == 'issues' && github.event.action == 'labeled'
         && !github.event.issue.pull_request
         && startsWith(github.event.label.name, 'claude:'))
-      || (github.event_name == 'workflow_run')
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
       agent: ${{ steps.detect.outputs.agent }}

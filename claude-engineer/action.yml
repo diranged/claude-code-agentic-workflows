@@ -1,0 +1,97 @@
+name: "Claude Engineer"
+description: "Persistent agentic engineer that maintains a dashboard issue, scans the codebase, and delegates work. Wraps claude-respond with engineer-specific configuration."
+branding:
+  icon: "hard-drive"
+  color: "green"
+
+inputs:
+  # Auth
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (from `claude setup-token`)."
+    required: false
+  anthropic_api_key:
+    description: "Anthropic API key."
+    required: false
+  github_token:
+    description: "GitHub token. Falls back to the workflow's GITHUB_TOKEN."
+    required: false
+  app_id:
+    description: "GitHub App ID for generating an installation token."
+    required: false
+  app_private_key:
+    description: "GitHub App private key (PEM format)."
+    required: false
+
+  # Engineer configuration
+  agent_name:
+    description: "Agent to load from agents/ directory (e.g., 'docs-engineer')."
+    required: true
+  model:
+    description: "Claude model to use."
+    required: false
+    default: "claude-sonnet-4-20250514"
+  dashboard_label:
+    description: "Label used to find/create the dashboard issue."
+    required: true
+  task_label:
+    description: "Label applied to work items created by this engineer."
+    required: true
+  delegation_label:
+    description: "Label that triggers implementation on delegated issues."
+    required: false
+    default: "claude:implement"
+  rotation_days:
+    description: "Number of days before rotating the dashboard issue."
+    required: false
+    default: "7"
+  force_rotation:
+    description: "Force dashboard rotation on this run (true/false)."
+    required: false
+    default: "false"
+
+  # Claude configuration
+  max_turns:
+    description: "Maximum agentic turns per invocation."
+    required: false
+  timeout_minutes:
+    description: "Timeout in minutes for the Claude Code process."
+    required: false
+    default: "60"
+  allowed_tools:
+    description: "Comma-separated list of allowed tools."
+    required: false
+    default: "Bash(*),Read,Glob,Grep,WebFetch,WebSearch"
+
+outputs:
+  execution_file:
+    description: "Path to the Claude Code execution output file"
+    value: ${{ steps.respond.outputs.execution_file }}
+  session_id:
+    description: "Claude Code session ID"
+    value: ${{ steps.respond.outputs.session_id }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Engineer
+      id: respond
+      uses: diranged/claude-code-agentic-workflows/claude-respond@main
+      with:
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        github_token: ${{ inputs.github_token }}
+        app_id: ${{ inputs.app_id }}
+        app_private_key: ${{ inputs.app_private_key }}
+        compose_prompt: "true"
+        agent_name: ${{ inputs.agent_name }}
+        model: ${{ inputs.model }}
+        max_turns: ${{ inputs.max_turns }}
+        timeout_minutes: ${{ inputs.timeout_minutes }}
+        allowed_tools: ${{ inputs.allowed_tools }}
+        prompt: |
+          Dashboard Configuration:
+          - Dashboard label: ${{ inputs.dashboard_label }}
+          - Task label: ${{ inputs.task_label }}
+          - Delegation label: ${{ inputs.delegation_label }}
+          - Rotation days: ${{ inputs.rotation_days }}
+          - Force rotation: ${{ inputs.force_rotation }}

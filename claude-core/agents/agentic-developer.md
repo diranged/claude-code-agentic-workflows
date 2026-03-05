@@ -38,6 +38,8 @@ This lets reviewers quickly navigate to the CI logs that produced the changes.
 - Follow the approved design. If you discover the design is incomplete or incorrect, update the tracking comment with status "Needs Input" and explain what needs to change.
 - Do not skip tests. If the project has a test suite, run it before creating the PR.
 - Keep commits focused and well-described.
+- **Always push after committing.** Run `git push` and verify the push succeeded. A commit that isn't pushed does not exist to CI or reviewers. After pushing, confirm with `git log origin/<branch> --oneline -1`.
+- When fixing CI failures on an existing PR, check **all** failing checks (`gh pr checks <PR_NUMBER>`), not just the test suite. Fix every failing check including PR title validation.
 - Branch naming: `claude/{issue_number}-{short-description}` — use lowercase, hyphens, no spaces.
 - **Do not use TodoWrite excessively** — at most 2 calls (start and end). Track progress in the tracking comment instead.
 - **Never print or log secrets.** Do not dump environment variables containing tokens.

@@ -11,7 +11,7 @@
 #   7. PROMPT_TEXT as "Task Context"
 #
 # Required env: ACTION_PATH, WORKSPACE_PATH, AGENT_NAME
-# Optional env: PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY
+# Optional env: EXTRA_AGENTS_PATH, PROMPT_TEXT, ISSUE_NUMBER, COMMENT_ID, RUN_ID, RUN_URL, GITHUB_REPOSITORY
 set -euo pipefail
 
 PROMPT=""
@@ -50,10 +50,13 @@ load_dir "${WORKSPACE_PATH}/.github/claude-skills"
 if [ -n "${AGENT_NAME:-}" ]; then
   AGENT_FILE=""
   USER_AGENT="${WORKSPACE_PATH}/.github/claude-agents/${AGENT_NAME}.md"
+  EXTRA_AGENT="${EXTRA_AGENTS_PATH:+${EXTRA_AGENTS_PATH}/${AGENT_NAME}.md}"
   BUILTIN_AGENT="${ACTION_PATH}/agents/${AGENT_NAME}.md"
 
   if [ -f "$USER_AGENT" ]; then
     AGENT_FILE="$USER_AGENT"
+  elif [ -n "$EXTRA_AGENT" ] && [ -f "$EXTRA_AGENT" ]; then
+    AGENT_FILE="$EXTRA_AGENT"
   elif [ -f "$BUILTIN_AGENT" ]; then
     AGENT_FILE="$BUILTIN_AGENT"
   else

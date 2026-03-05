@@ -35,9 +35,10 @@ fi
 # 5. Agent file must exist (when compose_prompt=true and agent_name is set)
 if [ "${COMPOSE_PROMPT:-}" = "true" ] && [ -n "${AGENT_NAME:-}" ]; then
   USER_AGENT="${WORKSPACE_PATH:-.}/.github/claude-agents/${AGENT_NAME}.md"
+  EXTRA_AGENT="${EXTRA_AGENTS_PATH:+${EXTRA_AGENTS_PATH}/${AGENT_NAME}.md}"
   BUILTIN_AGENT="${ACTION_PATH:-.}/agents/${AGENT_NAME}.md"
-  if [ ! -f "$USER_AGENT" ] && [ ! -f "$BUILTIN_AGENT" ]; then
-    echo "::error::Agent '${AGENT_NAME}' not found in agents/ or .github/claude-agents/"
+  if [ ! -f "$USER_AGENT" ] && { [ -z "$EXTRA_AGENT" ] || [ ! -f "$EXTRA_AGENT" ]; } && [ ! -f "$BUILTIN_AGENT" ]; then
+    echo "::error::Agent '${AGENT_NAME}' not found in agents/, extra_agents_path, or .github/claude-agents/"
     exit 1
   fi
 fi

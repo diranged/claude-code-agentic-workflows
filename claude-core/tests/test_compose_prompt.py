@@ -224,6 +224,53 @@ class TestComposePrompt(unittest.TestCase):
         prompt = outputs.get("prompt", "")
         self.assertIn("Architect", prompt)
 
+    def test_loads_docs_engineer_agent_via_extra_path(self):
+        """docs-engineer agent should load from extra_agents_path."""
+        engineer_agents = os.path.join(CORE_DIR, "..", "claude-engineer", "agents")
+        rc, _, _, outputs = self._run({
+            "AGENT_NAME": "docs-engineer",
+            "EXTRA_AGENTS_PATH": engineer_agents,
+        })
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Documentation Engineer", prompt)
+
+    def test_extra_agents_path_priority(self):
+        """extra_agents_path should be checked after user overrides but before built-in."""
+        extra_dir = tempfile.mkdtemp()
+        with open(os.path.join(extra_dir, "agentic-designer.md"), "w") as f:
+            f.write("# Agent: Extra Path Designer\n\nFrom extra path.\n")
+
+        rc, _, _, outputs = self._run({
+            "AGENT_NAME": "agentic-designer",
+            "EXTRA_AGENTS_PATH": extra_dir,
+        })
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # extra_agents_path should win over built-in
+        self.assertIn("Extra Path Designer", prompt)
+
+    def test_user_override_beats_extra_agents_path(self):
+        """User .github/claude-agents/ should take priority over extra_agents_path."""
+        workspace = tempfile.mkdtemp()
+        override_dir = os.path.join(workspace, ".github", "claude-agents")
+        os.makedirs(override_dir)
+        with open(os.path.join(override_dir, "my-agent.md"), "w") as f:
+            f.write("# Agent: User Override Agent\n")
+
+        extra_dir = tempfile.mkdtemp()
+        with open(os.path.join(extra_dir, "my-agent.md"), "w") as f:
+            f.write("# Agent: Extra Path Agent\n")
+
+        rc, _, _, outputs = self._run({
+            "AGENT_NAME": "my-agent",
+            "EXTRA_AGENTS_PATH": extra_dir,
+        }, workspace=workspace)
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("User Override Agent", prompt)
+        self.assertNotIn("Extra Path Agent", prompt)
+
     def test_heredoc_output_format(self):
         """Output should use heredoc format with COMPOSED_EOF delimiter."""
         rc, _, _, outputs = self._run()

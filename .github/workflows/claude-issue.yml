@@ -5,6 +5,9 @@ on:
     types: [created]
   issues:
     types: [assigned, labeled]
+  workflow_run:
+    workflows: ["Tests", "Conventional Commit Check"]
+    types: [completed]
 
 jobs:
   # Job 1: Determine if we should run and which agent to use
@@ -110,3 +113,64 @@ jobs:
           model: ${{ needs.detect-intent.outputs.model }}
           issue_comment_id: ${{ needs.setup.outputs.comment_id }}
           allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"
+
+  # Job 4: Re-trigger developer when CI fails on a Claude-authored PR
+  ci-retry:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'failure'
+    permissions:
+      issues: write
+      pull-requests: read
+    steps:
+      - name: Check Claude PR and retry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAX_RETRIES: "3"
+        run: |
+          set -euo pipefail
+
+          # Get PR from workflow run
+          PR_NUMBER=$(echo '${{ toJson(github.event.workflow_run.pull_requests) }}' | jq -r '.[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR associated with this workflow run"
+            exit 0
+          fi
+
+          # Check if PR was authored by Claude
+          PR_AUTHOR=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json author --jq '.author.login')
+          case "$PR_AUTHOR" in
+            *claude*|*\[bot\]*) ;;
+            *)
+              echo "PR #$PR_NUMBER not authored by Claude (author: $PR_AUTHOR), skipping"
+              exit 0
+              ;;
+          esac
+
+          # Find linked issue from PR body (looks for "Closes #N")
+          ISSUE_NUMBER=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json body --jq '.body' | grep -oE 'Closes #[0-9]+' | head -1 | grep -oE '[0-9]+')
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "No linked issue found in PR #$PR_NUMBER body"
+            exit 0
+          fi
+
+          # Count commits as retry gauge
+          COMMIT_COUNT=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json commits --jq '.commits | length')
+          echo "PR #$PR_NUMBER has $COMMIT_COUNT commits (max retries: $MAX_RETRIES)"
+
+          if [ "$COMMIT_COUNT" -gt "$MAX_RETRIES" ]; then
+            echo "Exceeded max retries, escalating to humans"
+            gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" \
+              --body "CI has failed after $COMMIT_COUNT attempts on PR #$PR_NUMBER. Auto-fix limit reached. Human review needed.
+
+          **Failed run:** ${{ github.event.workflow_run.html_url }}"
+            exit 0
+          fi
+
+          # Post @claude comment to re-trigger the developer agent
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" \
+            --body "@claude implement — CI failed on PR #$PR_NUMBER (attempt $COMMIT_COUNT/$MAX_RETRIES). Fix the failing checks.
+
+          **Failed run:** ${{ github.event.workflow_run.html_url }}"
+        shell: bash

@@ -9,7 +9,7 @@ gh api \
   --method PATCH \
   "/repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" \
   -f body="$(cat <<'COMMENT_EOF'
-<!-- claude-tracking-comment -->
+<div data-claude-tracking-comment hidden></div>
 
 ## Status: <STATUS>
 
@@ -43,7 +43,7 @@ Replace `<STATUS>` with one of:
 ## Rules
 
 1. Update the tracking comment at meaningful milestones (starting work, design posted, PR created, blocked).
-2. Always preserve the `<!-- claude-tracking-comment -->` HTML marker as the first line.
+2. Always preserve the `<div data-claude-tracking-comment hidden></div>` HTML marker as the first line.
 3. Always include the workflow run link (`**Run:** [View workflow run](...)`) so reviewers can inspect logs.
 4. When blocked or needing clarification, set status to **Needs Input** and clearly describe what you need.
 5. Keep the comment body concise — use `<details>` blocks for verbose content.

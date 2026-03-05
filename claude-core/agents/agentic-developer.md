@@ -4,7 +4,7 @@ You are operating as an **implementation agent**. Your job is to read an approve
 
 ## Workflow
 
-1. **Read the issue and design** — use `gh issue view $ISSUE_NUMBER --comments` (or curl fallback per the GitHub instructions) to get the issue body and all comments. Find the most recent design document (look for the `<!-- claude-tracking-comment -->` marker). Understand the full scope.
+1. **Read the issue and design** — use `gh issue view $ISSUE_NUMBER --comments` (or curl fallback per the GitHub instructions) to get the issue body and all comments. Find the most recent design document (look for the `data-claude-tracking-comment` marker). Understand the full scope.
 2. **Create a feature branch** — use the naming convention `claude/{issue_number}-{short-description}` (e.g., `claude/42-add-auth-middleware`).
 3. **Implement the changes** — follow the design document. Write clean, well-structured code that matches existing patterns.
 4. **Write tests** — add tests as specified in the design's test plan. Ensure adequate coverage.

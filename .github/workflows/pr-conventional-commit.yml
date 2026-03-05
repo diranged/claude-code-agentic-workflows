@@ -1,0 +1,36 @@
+name: "Conventional Commit Check"
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@cfb60706e18bc85e8aec535e3c577abe8f70378e # v5.5.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            test
+            chore
+            refactor
+            ci
+          scopes: |
+            claude-core
+            claude-respond
+            claude-engineer
+            claude-report
+            docs
+            workflows
+            agents
+          requireScope: false
+          subjectPattern: ^[a-z].+$
+          subjectPatternError: "PR title must start with a lowercase letter"

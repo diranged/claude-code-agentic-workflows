@@ -1,0 +1,169 @@
+# Claude Agentic Design-to-Implementation Pipeline
+#
+# This workflow demonstrates the label-driven agentic pipeline where issues flow
+# through a structured process: claude:design → claude:review → claude:implement.
+# Each stage uses specialized agents optimized for that phase of development.
+#
+# Pipeline Flow:
+# 1. Apply "claude:design" label → Agentic Designer creates implementation plan
+# 2. Apply "claude:review" label → Architect reviews and approves the design
+# 3. Apply "claude:implement" label → Agentic Developer implements the approved design
+#
+# Copy this file to .github/workflows/ and customize the configuration below.
+
+name: "Claude Agentic Pipeline"
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  # Job 1: Determine if this is a pipeline trigger and which agent to use
+  detect-intent:
+    runs-on: ubuntu-latest
+    # Note: For production use, consider self-hosted runners for better performance
+
+    # Only run when a claude: label is applied to an issue (not a PR)
+    if: >-
+      !github.event.issue.pull_request
+      && github.event.action == 'labeled'
+      && startsWith(github.event.label.name, 'claude:')
+
+    outputs:
+      should_run: ${{ steps.detect.outputs.should_run }}
+      agent: ${{ steps.detect.outputs.agent }}
+      model: ${{ steps.detect.outputs.model }}
+      issue_number: ${{ steps.detect.outputs.issue_number }}
+
+    steps:
+      - name: Checkout intent detection script
+        # Use SHA-pinned checkout for security (recommended practice)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: claude-core/scripts/
+          sparse-checkout-cone-mode: false
+
+      - name: Detect pipeline stage and determine agent
+        id: detect
+        env:
+          COMMENT_BODY: ""  # Empty for label-triggered events
+          TRIGGER_LABEL: ${{ github.event.label.name }}
+        run: |
+          echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+          # The detect_intent.sh script handles label-to-agent mapping:
+          # claude:design    → agentic-designer  (creates implementation plans)
+          # claude:review    → architect         (reviews designs and architecture)
+          # claude:implement → agentic-developer (implements approved designs)
+          bash claude-core/scripts/detect_intent.sh
+        shell: bash
+
+  # Job 2: Set up pipeline execution (create tracking comment)
+  setup:
+    runs-on: ubuntu-latest
+    needs: detect-intent
+    if: needs.detect-intent.outputs.should_run == 'true'
+    permissions:
+      issues: write
+    outputs:
+      comment_id: ${{ steps.create-comment.outputs.comment_id }}
+
+    steps:
+      - name: Create pipeline tracking comment
+        id: create-comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.detect-intent.outputs.issue_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PIPELINE_STAGE: ${{ github.event.label.name }}
+          AGENT_NAME: ${{ needs.detect-intent.outputs.agent }}
+        run: |
+          BODY='<div data-claude-tracking-comment hidden></div>'
+          BODY="${BODY}"$'\n'"## Status: Initializing"
+          BODY="${BODY}"$'\n\n'"**Run:** [View workflow run](${RUN_URL})"
+          BODY="${BODY}"$'\n'"**Pipeline Stage:** \`${PIPELINE_STAGE}\`"
+          BODY="${BODY}"$'\n'"**Agent:** \`${AGENT_NAME}\`"
+          BODY="${BODY}"$'\n\n'"Initializing pipeline stage..."
+          COMMENT_ID=$(gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/comments" \
+            -f body="${BODY}" \
+            --jq '.id')
+          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  # Job 3: Execute the pipeline stage with the appropriate agent
+  claude-run:
+    runs-on: ubuntu-latest
+    # Note: Production deployments often use self-hosted runners for performance
+    # and to avoid GitHub Actions usage limits for AI workloads
+
+    needs: [detect-intent, setup]
+    if: needs.detect-intent.outputs.should_run == 'true'
+
+    # Permissions vary by pipeline stage - designers/reviewers typically read-only,
+    # implementers need write access
+    permissions:
+      contents: write      # Write access for implementation stage
+      issues: write        # Update tracking comment and manage pipeline labels
+      pull-requests: write # Create PRs during implementation
+      id-token: write      # For OIDC authentication if needed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Execute pipeline stage
+        # Use @main for development, pin to a release tag for production (e.g., @v1)
+        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        with:
+          # Primary authentication - Claude Code OAuth token (recommended)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Alternative authentication - Anthropic API key (fallback option)
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Pipeline configuration - no manual triggers since this is label-driven
+          trigger_phrase: ""                      # Disabled for pipeline mode
+          assignee_trigger: ""                    # Disabled for pipeline mode
+          label_trigger: "claude"                 # Match claude: label prefix
+
+          # Bot configuration
+          allowed_bots: "claude[bot]"             # Which bots can trigger (comma-separated)
+          notify_owners: "your-github-username"   # Who to notify on errors (comma-separated)
+
+          # Agent behavior - dynamically determined by pipeline stage
+          compose_prompt: "true"                  # Enable agentic behavior
+          agent_name: ${{ needs.detect-intent.outputs.agent }}    # From label mapping
+          model: ${{ needs.detect-intent.outputs.model }}         # Optimized per stage
+
+          # Tracking
+          issue_comment_id: ${{ needs.setup.outputs.comment_id }} # For progress updates
+
+          # Tool permissions - adjust based on pipeline stage needs
+          # Design/Review stages typically need read-only access
+          # Implementation stage needs write access
+          allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"
+
+          # Pipeline-specific configuration (uncomment as needed):
+          # max_tokens: "8192"                    # Longer responses for detailed designs
+          # prompt_caching: "true"                # Cache prompts for efficiency across stages
+          # append_artifacts: "true"              # Include stage artifacts in tracking
+
+# Pipeline Management:
+#
+# Label Management:
+# - Labels should be applied manually or via automation based on your workflow
+# - Remove previous stage labels to keep issues clean (e.g., remove claude:design after claude:review)
+# - The pipeline automatically handles agent routing based on current labels
+#
+# Stage Descriptions:
+# - claude:design    → Creates detailed implementation plans and architecture designs
+# - claude:review    → Reviews designs for architectural soundness and best practices
+# - claude:implement → Implements approved designs with full development workflow
+#
+# Customization:
+# - Adjust model selection in claude-core/scripts/detect_intent.sh for your needs
+# - Add custom labels/agents by extending the detection script
+# - Consider different permission sets per stage for tighter security

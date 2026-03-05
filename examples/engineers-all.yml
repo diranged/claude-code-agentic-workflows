@@ -1,0 +1,140 @@
+# Multiple Claude Engineers
+#
+# This workflow demonstrates orchestrating multiple engineer agents from a single
+# workflow file. Engineers can run on staggered schedules for resource efficiency
+# or be triggered individually via workflow_dispatch for targeted execution.
+#
+# Use this pattern when you want centralized management of multiple engineers
+# while maintaining the ability to run them individually as needed.
+#
+# Copy this file to .github/workflows/ and customize the configuration below.
+
+name: "Claude Engineers - All"
+
+on:
+  # Run all engineers daily at 8am UTC
+  # Consider staggered times for resource efficiency: 8am, 10am, 12pm, etc.
+  schedule:
+    - cron: '0 8 * * *'
+
+  # Manual trigger with engineer selection
+  workflow_dispatch:
+    inputs:
+      engineer:
+        description: 'Which engineer to run (leave empty for all)'
+        type: choice
+        options:
+          - 'all'
+          - 'docs-engineer'
+          # Add more engineers here as you create them
+          # - 'security-engineer'
+          # - 'performance-engineer'
+        default: 'all'
+      force_rotation:
+        description: 'Force dashboard issue rotation for selected engineers'
+        type: boolean
+        default: false
+
+jobs:
+  # Documentation Engineer - Manages docs, READMEs, and knowledge sharing
+  docs-engineer:
+    runs-on: ubuntu-latest
+    # Note: Production deployments often use self-hosted runners for performance
+
+    # Run on schedule, or when manually triggered for 'all' or 'docs-engineer'
+    if: >-
+      github.event_name == 'schedule'
+      || github.event.inputs.engineer == 'all'
+      || github.event.inputs.engineer == 'docs-engineer'
+
+    permissions:
+      contents: read       # Read repository files and history
+      issues: write        # Manage dashboard issues and task labels
+      pull-requests: read  # Review and analyze existing PRs
+      id-token: write      # For OIDC authentication if needed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Documentation Engineer
+        # Use @main for development, pin to a release tag for production (e.g., @v1)
+        uses: diranged/claude-code-agentic-workflows/claude-engineer@main
+        with:
+          # Primary authentication - Claude Code OAuth token (recommended)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Alternative authentication - Anthropic API key (fallback option)
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Agent configuration
+          agent_name: "docs-engineer"
+          model: "claude-sonnet-4-20250514"
+
+          # Dashboard management - each engineer maintains separate dashboards
+          dashboard_label: "claude-engineer:docs"
+          task_label: "claude-engineer:docs-task"
+          delegation_label: "claude:design"
+
+          # Rotation handling for both scheduled and manual runs
+          force_rotation: ${{ github.event.inputs.force_rotation || 'false' }}
+
+  # Template for additional engineers (uncomment and customize as needed)
+  # second-engineer:
+  #   runs-on: ubuntu-latest
+  #
+  #   # Run on schedule, or when manually triggered for 'all' or 'second-engineer'
+  #   # Add 'second-engineer' to the workflow_dispatch options above
+  #   if: >-
+  #     github.event_name == 'schedule'
+  #     || github.event.inputs.engineer == 'all'
+  #     || github.event.inputs.engineer == 'second-engineer'
+  #
+  #   permissions:
+  #     contents: read
+  #     issues: write
+  #     pull-requests: read
+  #     id-token: write
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+  #
+  #     - name: Run [Second Engineer Name]
+  #       uses: diranged/claude-code-agentic-workflows/claude-engineer@main
+  #       with:
+  #         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+  #         agent_name: "second-engineer-agent"    # Your custom agent definition
+  #         model: "claude-sonnet-4-20250514"
+  #         dashboard_label: "claude-engineer:second"
+  #         task_label: "claude-engineer:second-task"
+  #         delegation_label: "claude:design"
+  #         force_rotation: ${{ github.event.inputs.force_rotation || 'false' }}
+
+# Configuration Guidelines:
+#
+# Adding New Engineers:
+# 1. Uncomment and customize the template job above
+# 2. Add your engineer choice to the workflow_dispatch options
+# 3. Create your custom agent definition in claude-engineer/agents/
+# 4. Choose unique dashboard_label and task_label for each engineer
+# 5. Update the job name and step names to be descriptive
+#
+# Schedule Staggering:
+# For resource efficiency, consider staggered schedules:
+# - docs-engineer:        cron: '0 8 * * *'    (8am UTC)
+# - security-engineer:    cron: '0 10 * * *'   (10am UTC)
+# - performance-engineer: cron: '0 12 * * *'   (12pm UTC)
+#
+# Engineer Specializations:
+# - docs-engineer:        Documentation, READMEs, API docs, changelog management
+# - security-engineer:    Dependency updates, vulnerability scanning, security reviews
+# - performance-engineer: Performance analysis, optimization opportunities, monitoring
+# - test-engineer:        Test coverage analysis, flaky test detection, test improvements
+# - janitor-engineer:     Code cleanup, dead code removal, dependency maintenance
+#
+# Advanced Configuration:
+# - Use different models per engineer based on their specialization
+# - Adjust allowed_tools for engineers that need write permissions
+# - Set up different notification owners per engineer type
+# - Consider time zone considerations for schedule optimization

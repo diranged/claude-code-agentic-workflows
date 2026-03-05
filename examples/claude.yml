@@ -1,0 +1,157 @@
+# Claude Interactive Assistant
+#
+# This workflow provides an interactive Claude assistant that responds to @claude
+# mentions in GitHub issues. It uses intent detection to automatically route
+# requests to appropriate agents based on comment content or applied labels.
+#
+# Copy this file to .github/workflows/ and customize the configuration below.
+
+name: "Claude Interactive Assistant"
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [assigned, labeled]
+
+jobs:
+  # Job 1: Determine if we should run and which agent/model to use
+  detect-intent:
+    runs-on: ubuntu-latest
+    # Note: For production use, consider self-hosted runners for better performance
+
+    # Prevent running on pull request comments, only run for actual issue events
+    # triggered by @claude mentions, assignments, or claude: labels
+    if: >-
+      !github.event.issue.pull_request
+      && (
+        (github.event_name == 'issue_comment'
+          && github.event.sender.type != 'Bot'
+          && contains(github.event.comment.body, '@claude'))
+        || (github.event_name == 'issues' && github.event.action == 'assigned')
+        || (github.event_name == 'issues' && github.event.action == 'labeled'
+          && startsWith(github.event.label.name, 'claude:'))
+      )
+
+    outputs:
+      should_run: ${{ steps.detect.outputs.should_run }}
+      agent: ${{ steps.detect.outputs.agent }}
+      model: ${{ steps.detect.outputs.model }}
+      issue_number: ${{ steps.detect.outputs.issue_number }}
+
+    steps:
+      - name: Checkout intent detection script
+        # Use SHA-pinned checkout for security (recommended practice)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: claude-core/scripts/
+          sparse-checkout-cone-mode: false
+
+      - name: Detect intent and determine agent/model
+        id: detect
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body || '' }}
+          TRIGGER_LABEL: ${{ github.event.label.name || '' }}
+        run: |
+          echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          # This script analyzes the comment/label to choose the appropriate agent
+          bash claude-core/scripts/detect_intent.sh
+        shell: bash
+
+  # Job 2: Set up the interaction (react to comment, create tracking comment)
+  setup:
+    runs-on: ubuntu-latest
+    needs: detect-intent
+    if: needs.detect-intent.outputs.should_run == 'true'
+    permissions:
+      issues: write
+    outputs:
+      comment_id: ${{ steps.create-comment.outputs.comment_id }}
+
+    steps:
+      - name: Add rocket reaction to triggering comment
+        if: github.event_name == 'issue_comment'
+        run: |
+          gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content='rocket'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+
+      - name: Create tracking comment
+        id: create-comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.detect-intent.outputs.issue_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          BODY='<div data-claude-tracking-comment hidden></div>'
+          BODY="${BODY}"$'\n'"## Status: Initializing"
+          BODY="${BODY}"$'\n\n'"**Run:** [View workflow run](${RUN_URL})"
+          BODY="${BODY}"$'\n\n'"Claude is initializing..."
+          COMMENT_ID=$(gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/comments" \
+            -f body="${BODY}" \
+            --jq '.id')
+          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  # Job 3: Run Claude with the determined agent configuration
+  claude-run:
+    runs-on: ubuntu-latest
+    # Note: Production deployments often use self-hosted runners for performance
+    # and to avoid GitHub Actions usage limits for AI workloads
+
+    needs: [detect-intent, setup]
+    if: needs.detect-intent.outputs.should_run == 'true'
+
+    # Permissions required for Claude to interact with the repository
+    permissions:
+      contents: write      # Read/write repository files
+      issues: write        # Update tracking comment and manage labels
+      pull-requests: write # Create and update pull requests
+      id-token: write      # For OIDC authentication if needed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run Claude with dynamic agent routing
+        # Use @main for development, pin to a release tag for production (e.g., @v1)
+        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        with:
+          # Primary authentication - Claude Code OAuth token (recommended)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+          # Alternative authentication - Anthropic API key (fallback option)
+          # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Trigger configuration
+          trigger_phrase: "@claude"              # What phrase activates Claude
+          assignee_trigger: "claude"             # Username that activates on assignment
+          label_trigger: "claude"                # Label prefix that activates Claude
+
+          # Bot configuration
+          allowed_bots: "claude[bot]"             # Which bots can trigger (comma-separated)
+          notify_owners: "your-github-username"   # Who to notify on errors (comma-separated)
+
+          # Agent behavior
+          compose_prompt: "true"                  # Enable dynamic agent composition
+          agent_name: ${{ needs.detect-intent.outputs.agent }}    # From intent detection
+          model: ${{ needs.detect-intent.outputs.model }}         # From intent detection
+
+          # Tracking
+          issue_comment_id: ${{ needs.setup.outputs.comment_id }} # For progress updates
+
+          # Tool permissions - customize based on your security requirements
+          # Default allows read operations plus git, web access, and file editing
+          allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"
+
+          # Additional configuration options (uncomment as needed):
+          # max_tokens: "8192"                    # Response length limit
+          # prompt_caching: "true"                # Enable prompt caching for efficiency
+          # append_artifacts: "true"              # Include run artifacts in tracking comment

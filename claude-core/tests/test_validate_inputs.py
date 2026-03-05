@@ -47,7 +47,7 @@ class TestValidateInputs(unittest.TestCase):
     def test_succeeds_with_oauth_token(self):
         rc, stdout, _, _ = run_script(
             "validate_inputs.sh",
-            {"OAUTH_TOKEN": "tok", "ACTION_PATH": self.temp_action_path, "ACTION_PATH": self.temp_action_path},
+            {"OAUTH_TOKEN": "tok", "ACTION_PATH": self.temp_action_path},
         )
         self.assertEqual(rc, 0)
         self.assertIn("OAuth token", stdout)
@@ -236,7 +236,7 @@ class TestValidateInputs(unittest.TestCase):
     def test_oauth_notice_message(self):
         rc, stdout, _, _ = run_script(
             "validate_inputs.sh",
-            {"OAUTH_TOKEN": "tok", "ACTION_PATH": self.temp_action_path, "ACTION_PATH": self.temp_action_path},
+            {"OAUTH_TOKEN": "tok", "ACTION_PATH": self.temp_action_path},
         )
         self.assertEqual(rc, 0)
         self.assertIn("OAuth token", stdout)
@@ -330,7 +330,7 @@ class TestValidateInputs(unittest.TestCase):
     def test_fails_dry_run_invalid_value(self):
         rc, stdout, _, _ = run_script(
             "validate_inputs.sh",
-            {"OAUTH_TOKEN": "tok", "DRY_RUN": "yes", "ACTION_PATH": self.temp_action_path, "ACTION_PATH": self.temp_action_path},
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": "yes", "ACTION_PATH": self.temp_action_path},
         )
         self.assertEqual(rc, 1)
         self.assertIn("dry_run must be 'true' or 'false', got 'yes'", stdout)
@@ -338,7 +338,7 @@ class TestValidateInputs(unittest.TestCase):
     def test_fails_dry_run_numeric(self):
         rc, stdout, _, _ = run_script(
             "validate_inputs.sh",
-            {"OAUTH_TOKEN": "tok", "DRY_RUN": "1", "ACTION_PATH": self.temp_action_path, "ACTION_PATH": self.temp_action_path},
+            {"OAUTH_TOKEN": "tok", "DRY_RUN": "1", "ACTION_PATH": self.temp_action_path},
         )
         self.assertEqual(rc, 1)
         self.assertIn("dry_run must be 'true' or 'false', got '1'", stdout)

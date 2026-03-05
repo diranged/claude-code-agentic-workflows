@@ -243,6 +243,17 @@ class TestComposePrompt(unittest.TestCase):
         prompt = outputs.get("prompt", "")
         self.assertIn("Documentation Engineer", prompt)
 
+    def test_loads_code_janitor_agent_via_extra_path(self):
+        """code-janitor agent should load from extra_agents_path."""
+        engineer_agents = os.path.join(CORE_DIR, "..", "claude-engineer", "agents")
+        rc, _, _, outputs = self._run({
+            "AGENT_NAME": "code-janitor",
+            "EXTRA_AGENTS_PATH": engineer_agents,
+        })
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        self.assertIn("Code Janitor", prompt)
+
     def test_extra_agents_path_priority(self):
         """extra_agents_path should be checked after user overrides but before built-in."""
         extra_dir = tempfile.mkdtemp()

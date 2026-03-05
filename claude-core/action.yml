@@ -24,6 +24,12 @@ inputs:
     description: "GitHub App private key (PEM format) for generating an installation token."
     required: false
 
+  # Bot configuration
+  allowed_bots:
+    description: "Comma-separated list of allowed bot usernames, or '*' to allow all bots. Empty (default) allows no bots."
+    required: false
+    default: ""
+
   # Trigger configuration
   trigger_phrase:
     description: "Phrase that triggers Claude in comments."
@@ -81,6 +87,9 @@ inputs:
     default: "false"
   issue_comment_id:
     description: "Tracking comment ID for progress updates"
+    required: false
+  notify_owners:
+    description: "Comma-separated GitHub usernames to assign when the agent needs human input."
     required: false
 
   display_report:
@@ -172,12 +181,14 @@ runs:
         COMMENT_ID: ${{ inputs.issue_comment_id }}
         RUN_ID: ${{ github.run_id }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        NOTIFY_OWNERS: ${{ inputs.notify_owners }}
 
     # Step 7: Invoke upstream claude-code-action
     - name: Run Claude Code
       id: claude
       uses: anthropics/claude-code-action@e763fe78de2db7389e04818a00b5ff8ba13d1360 # v1
       with:
+        allowed_bots: ${{ inputs.allowed_bots }}
         trigger_phrase: ${{ inputs.trigger_phrase }}
         assignee_trigger: ${{ inputs.assignee_trigger }}
         label_trigger: ${{ inputs.label_trigger }}

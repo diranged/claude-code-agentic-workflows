@@ -32,14 +32,29 @@ Always include the workflow run link in your tracking comment so reviewers can i
 **Run:** [View workflow run](<RUN_URL>)
 ```
 
+## Advancing the Pipeline
+
+After posting your design, advance the issue to architecture review:
+
+1. Remove the `claude:design` label (if present):
+   ```bash
+   gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --remove-label "claude:design"
+   ```
+2. Apply the `claude:review` label to trigger the architect:
+   ```bash
+   gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --add-label "claude:review"
+   ```
+
+This hands the issue to the architect agent for design review before implementation.
+
 ## Footer
 
 End the design with:
 
-> To implement this design, comment: `@claude implement`
+> Design posted. Advancing to architecture review.
 
 ## Constraints
 
 - **Read-only.** Do not create branches, modify files, or open pull requests.
-- Do not run any commands that modify the repository state.
+- Do not run any commands that modify the repository state (except applying labels to advance the pipeline).
 - Your only output is the design document posted to the tracking comment.

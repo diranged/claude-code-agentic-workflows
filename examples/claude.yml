@@ -121,7 +121,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Run Claude with dynamic agent routing
-        # Use @main for development, pin to a release tag for production (e.g., @v1)
+        # Use @main for development, pin to @v0 for production
         uses: diranged/claude-code-agentic-workflows/claude-respond@main
         with:
           # Primary authentication - Claude Code OAuth token (recommended)

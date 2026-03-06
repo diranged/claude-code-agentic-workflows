@@ -276,9 +276,9 @@ jobs:
 
 ### Phase 3: Documentation & Polish
 - [ ] CLAUDE.md for the repo itself (so Claude Code sessions have full context)
-- [ ] Contributing guide
-- [ ] Versioning strategy (tag `v1` for stable composite action references)
-- [ ] Changelog
+- [x] Contributing guide
+- [x] Versioning strategy (tag `v0` for pre-release stable references)
+- [x] Changelog
 
 ### Phase 4: Future Enhancements
 - [ ] Security hardening (consider safe-outputs-like isolation)

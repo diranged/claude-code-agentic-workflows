@@ -17,6 +17,18 @@ Together, these actions enable sophisticated AI workflows while maintaining clea
 
 Key differentiator: Claude Max subscribers can run these agents with no additional per-execution costs via OAuth authentication, making AI-powered workflows economically viable for regular use.
 
+## Versioning
+
+This project uses semantic versioning with a `v0` pre-release strategy:
+
+- **`@v0`** — Pin to the latest stable v0.x.y release (recommended for most users)
+- **`@v0.x.y`** — Pin to an exact version for reproducible builds
+- **`@main`** — Development branch (not recommended for production use)
+
+The project is currently pre-1.0, meaning breaking changes may occur between minor versions. All actions (claude-core, claude-respond, claude-engineer, claude-agent, claude-report) are versioned together as a monolithic release.
+
+For release process and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Quick Start
 
 ### Prerequisites

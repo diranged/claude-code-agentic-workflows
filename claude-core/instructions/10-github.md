@@ -7,9 +7,25 @@
 
 ## GitHub API Access
 
-- The `gh` CLI may or may not be installed. **Try `gh` first** — if it fails with "command not found", immediately switch to `curl` with `Authorization: Bearer $GITHUB_TOKEN` headers. Do not spend turns searching for the binary.
-- Example curl fallback: `curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"`
+- The `gh` CLI is installed and available. **Always prefer `gh`** for GitHub API interactions — it handles authentication, pagination, and URL encoding automatically.
+- If `gh` fails with "command not found", fall back to `curl` with `Authorization: Bearer $GITHUB_TOKEN` headers.
 - **Never print or log token values.** If you need to verify a token exists, use `echo "TOKEN_SET: ${GITHUB_TOKEN:+yes}"` — never echo the actual value.
+
+### URL Encoding in curl
+
+When using `curl` with the GitHub API, **you must URL-encode special characters** in query parameters:
+
+- Colons (`:`) → `%3A` — this is critical for labels like `claude-engineer:docs`
+- Spaces → `%20` or `+`
+- Other special characters: `@` → `%40`, `#` → `%23`
+
+**Wrong:** `curl ... "https://api.github.com/repos/$GITHUB_REPOSITORY/issues?labels=claude-engineer:docs"`
+**Right:** `curl ... "https://api.github.com/repos/$GITHUB_REPOSITORY/issues?labels=claude-engineer%3Adocs"`
+
+With `gh`, this is handled automatically:
+```bash
+gh issue list --repo "$GITHUB_REPOSITORY" --label "claude-engineer:docs" --state open --json number,title
+```
 
 ## Comment Management
 

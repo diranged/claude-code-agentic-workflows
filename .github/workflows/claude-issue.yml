@@ -110,6 +110,8 @@ jobs:
 
       - name: Install gh CLI
         uses: dev-hanz-ops/install-gh-cli-action@af38ce09b1ec248aeb08eea2b16bbecea9e059f8 # v0.2.1
+        with:
+          gh-cli-version: 2.87.3
 
       - name: Run Claude
         uses: ./claude-respond

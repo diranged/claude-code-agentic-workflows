@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Claude
-        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
@@ -256,7 +256,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Claude
-        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           compose_prompt: "true"
@@ -287,7 +287,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Documentation Engineer
-        uses: diranged/claude-code-agentic-workflows/claude-engineer@main
+        uses: diranged/claude-code-agentic-workflows/claude-engineer@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           agent_name: "docs-engineer"
@@ -317,7 +317,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Security Auditor
-        uses: diranged/claude-code-agentic-workflows/claude-agent@main
+        uses: diranged/claude-code-agentic-workflows/claude-agent@v0
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
           agent_name: "security-auditor"
@@ -344,7 +344,7 @@ The `compose_prompt` system combines multiple sources to create sophisticated ag
 ### Usage
 
 ```yaml
-- uses: diranged/claude-code-agentic-workflows/claude-respond@main
+- uses: diranged/claude-code-agentic-workflows/claude-respond@v0
   with:
     compose_prompt: "true"
     agent_name: "agentic-designer"

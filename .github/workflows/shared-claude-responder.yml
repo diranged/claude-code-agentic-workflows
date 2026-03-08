@@ -3,6 +3,9 @@ name: "Shared: Claude Responder"
 # Reusable workflow for handling @claude mentions in issues and PRs.
 # Consumers call this from their own workflow that defines the trigger events.
 #
+# Required caller permissions (must be granted by the calling job):
+#   contents: write, issues: write, pull-requests: write, id-token: write
+#
 # Example caller:
 #   on:
 #     issue_comment:
@@ -21,6 +24,11 @@ name: "Shared: Claude Responder"
 #           && github.event.sender.type != 'Bot'
 #           && contains(github.event.comment.body, '@claude'))
 #         || (github.event_name == 'issues' && github.event.action == 'assigned')
+#       permissions:
+#         contents: write
+#         issues: write
+#         pull-requests: write
+#         id-token: write
 #       uses: diranged/claude-code-agentic-workflows/.github/workflows/shared-claude-responder.yml@v0
 #       with:
 #         runner: my-self-hosted-runner

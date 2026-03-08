@@ -55,7 +55,13 @@ Always include the workflow run link in your tracking comment. The run URL is pr
 
 ## Advancing the Pipeline
 
-After completing your review, decide the next step based on your findings:
+After completing your review, first check whether the issue has the `claude:auto_advance` label:
+
+```bash
+gh issue view $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' | grep -q '^claude:auto_advance$'
+```
+
+Then decide the next step based on your findings AND whether auto-advance is enabled:
 
 ### If the design is sound (no critical issues):
 
@@ -63,14 +69,22 @@ After completing your review, decide the next step based on your findings:
    ```bash
    gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --remove-label "claude:review"
    ```
-2. Apply the `claude:implement` label to trigger the developer:
+
+2. **If `claude:auto_advance` IS present**, apply the `claude:implement` label to trigger the developer:
    ```bash
    gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --add-label "claude:implement"
    ```
-3. End your report with:
-   > Design approved. Advancing to implementation.
+   End your report with:
+   > Design approved. Auto-advancing to implementation.
+
+3. **If `claude:auto_advance` is NOT present**, do **not** apply any pipeline labels. Set the status to "Needs Input" and assign notify owners per the GitHub Environment instructions. End your report with:
+   > Design approved. Waiting for human to advance.
+   >
+   > To proceed with implementation, apply the `claude:implement` label.
 
 ### If the design needs rework (critical issues found):
+
+Rework always goes back to the designer regardless of auto-advance:
 
 1. Remove the `claude:review` label:
    ```bash

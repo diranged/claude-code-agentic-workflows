@@ -199,6 +199,37 @@ Override built-in agents by placing custom definitions in `.github/claude-agents
 3. Built-in `claude-engineer/agents/`
 4. Inline prompt fallback
 
+## Pipeline Automation
+
+Claude supports both manual and automated pipeline workflows for issue processing:
+
+### Manual Pipeline (Default)
+
+Issues progress through `claude:design` → `claude:review` → `claude:implement` with human approval required at each gate. After each stage, the agent sets status to "Needs Input" and waits for a human to apply the next label.
+
+**Workflow:**
+1. Apply `claude:design` label → Designer creates implementation plan
+2. Human reviews and applies `claude:review` label → Architect reviews design
+3. Human reviews and applies `claude:implement` label → Developer implements
+
+### Automated Pipeline
+
+Adding the `claude:auto_advance` label to an issue enables automatic progression through all pipeline stages without human gates.
+
+**Workflow:**
+1. Apply both `claude:design` and `claude:auto_advance` labels → Designer creates plan and auto-advances to review
+2. Architect automatically reviews design and auto-advances to implementation (with concurrency gating)
+3. Developer implements the approved design
+
+**Concurrency Gating:** When `claude:auto_advance` is active, the architect checks implementation concurrency before advancing. If at the limit, it applies `claude:queued` instead of `claude:implement`.
+
+**Trust Model:** Engineer agents apply `claude:auto_advance` to their delegated issues by default, enabling fully autonomous operation. Human-initiated work remains gated unless the label is manually applied.
+
+**Apply the label:**
+```bash
+gh issue edit <NUMBER> --add-label "claude:auto_advance"
+```
+
 ## Repository Structure
 
 ```

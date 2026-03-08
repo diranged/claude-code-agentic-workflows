@@ -7,32 +7,16 @@
 
 ## GitHub API Access
 
-- The `gh` CLI is installed and available. **Always prefer `gh`** for GitHub API interactions — it handles authentication, pagination, and URL encoding automatically.
-- If `gh` fails with "command not found", fall back to `curl` with `Authorization: Bearer $GITHUB_TOKEN` headers.
+- The `gh` CLI is installed and authenticated. **Always use `gh`** for GitHub API interactions — it handles authentication, pagination, and URL encoding automatically.
+- **Do not fall back to `curl`.** If `gh` fails, report the error — do not attempt workarounds.
 - **Never print or log token values.** If you need to verify a token exists, use `echo "TOKEN_SET: ${GITHUB_TOKEN:+yes}"` — never echo the actual value.
-
-### URL Encoding in curl
-
-When using `curl` with the GitHub API, **you must URL-encode special characters** in query parameters:
-
-- Colons (`:`) → `%3A` — this is critical for labels like `claude-engineer:docs`
-- Spaces → `%20` or `+`
-- Other special characters: `@` → `%40`, `#` → `%23`
-
-**Wrong:** `curl ... "https://api.github.com/repos/$GITHUB_REPOSITORY/issues?labels=claude-engineer:docs"`
-**Right:** `curl ... "https://api.github.com/repos/$GITHUB_REPOSITORY/issues?labels=claude-engineer%3Adocs"`
-
-With `gh`, this is handled automatically:
-```bash
-gh issue list --repo "$GITHUB_REPOSITORY" --label "claude-engineer:docs" --state open --json number,title
-```
 
 ## Comment Management
 
 - A **tracking comment** has been created on the issue for you to post progress updates.
 - **Never create new top-level comments** on the issue — always update the existing tracking comment.
 - The tracking comment ID is provided in the runtime context below.
-- Use `gh api` (or curl) with PATCH to update the comment body.
+- Use `gh api` with PATCH to update the comment body.
 
 ## Workflow Run Links
 

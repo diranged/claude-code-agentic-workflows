@@ -21,11 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Install gh CLI
-        uses: dev-hanz-ops/install-gh-cli-action@af38ce09b1ec248aeb08eea2b16bbecea9e059f8 # v0.2.1
-        with:
-          gh-cli-version: 2.87.3
-
       - name: Run Documentation Engineer
         uses: ./claude-engineer
         with:
@@ -46,11 +41,6 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Install gh CLI
-        uses: dev-hanz-ops/install-gh-cli-action@af38ce09b1ec248aeb08eea2b16bbecea9e059f8 # v0.2.1
-        with:
-          gh-cli-version: 2.87.3
 
       - name: Run Code Janitor
         uses: ./claude-engineer

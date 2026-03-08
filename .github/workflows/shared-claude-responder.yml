@@ -134,12 +134,6 @@ on:
         type: string
         default: "rocket"
 
-      # Infrastructure
-      gh_cli_version:
-        description: "Version of gh CLI to install on the runner"
-        type: string
-        default: "2.87.3"
-
     secrets:
       claude_code_oauth_token:
         description: "Claude Code OAuth token (subscription billing)"
@@ -216,11 +210,6 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Install gh CLI
-        uses: dev-hanz-ops/install-gh-cli-action@af38ce09b1ec248aeb08eea2b16bbecea9e059f8 # v0.2.1
-        with:
-          gh-cli-version: ${{ inputs.gh_cli_version }}
 
       - name: Run Claude
         uses: diranged/claude-code-agentic-workflows/claude-respond@main

@@ -106,7 +106,7 @@ on:
       allowed_bots:
         description: "Comma-separated bot usernames allowed to trigger, or '*' for all"
         type: string
-        default: ""
+        default: "claude[bot]"
 
       # Notification
       notify_owners:

@@ -1,0 +1,251 @@
+name: "Shared: Claude Responder"
+
+# Reusable workflow for handling @claude mentions in issues and PRs.
+# Consumers call this from their own workflow that defines the trigger events.
+#
+# Example caller:
+#   on:
+#     issue_comment:
+#       types: [created]
+#     pull_request_review_comment:
+#       types: [created]
+#     issues:
+#       types: [assigned]
+#   jobs:
+#     respond:
+#       if: >-
+#         (github.event_name == 'issue_comment'
+#           && github.event.sender.type != 'Bot'
+#           && contains(github.event.comment.body, '@claude'))
+#         || (github.event_name == 'pull_request_review_comment'
+#           && github.event.sender.type != 'Bot'
+#           && contains(github.event.comment.body, '@claude'))
+#         || (github.event_name == 'issues' && github.event.action == 'assigned')
+#       uses: diranged/claude-code-agentic-workflows/.github/workflows/shared-claude-responder.yml@v0
+#       with:
+#         runner: my-self-hosted-runner
+#       secrets:
+#         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+on:
+  workflow_call:
+    inputs:
+      # Runner configuration
+      runner:
+        description: "Runner label for the Claude execution job"
+        type: string
+        required: true
+
+      # Trigger configuration
+      trigger_phrase:
+        description: "Phrase that triggers Claude in comments"
+        type: string
+        default: "@claude"
+      assignee_trigger:
+        description: "Username that triggers Claude when assigned to an issue"
+        type: string
+        default: ""
+      label_trigger:
+        description: "Label prefix that triggers Claude when applied"
+        type: string
+        default: ""
+      allowed_bots:
+        description: "Comma-separated bot usernames allowed to trigger, or '*' for all"
+        type: string
+        default: ""
+
+      # Notification
+      notify_owners:
+        description: "Comma-separated GitHub usernames to notify when human input needed"
+        type: string
+        default: ""
+
+      # Agent configuration
+      compose_prompt:
+        description: "Compose prompt from instructions/skills/agent"
+        type: string
+        default: "true"
+      agent_name:
+        description: "Agent personality to use (e.g., 'auto', 'agentic-designer')"
+        type: string
+        default: "auto"
+      model:
+        description: "Claude model to use"
+        type: string
+        default: "claude-sonnet-4-20250514"
+      max_turns:
+        description: "Maximum agentic turns per invocation"
+        type: string
+        default: ""
+      timeout_minutes:
+        description: "Timeout in minutes for Claude Code process"
+        type: string
+        default: "60"
+
+      # Tool configuration
+      allowed_tools:
+        description: "Comma-separated list of allowed tools"
+        type: string
+        default: ""
+      disallowed_tools:
+        description: "Comma-separated list of disallowed tools"
+        type: string
+        default: ""
+
+      # Advanced Claude configuration
+      claude_args:
+        description: "Additional arguments passed directly to Claude CLI"
+        type: string
+        default: ""
+      settings:
+        description: "Claude Code settings as JSON string or path to settings file"
+        type: string
+        default: ""
+      additional_permissions:
+        description: "Additional GitHub permissions to request"
+        type: string
+        default: ""
+      extra_instructions_path:
+        description: "Additional directory of instruction files to load"
+        type: string
+        default: ""
+      extra_agents_path:
+        description: "Additional directory to search for agent definitions"
+        type: string
+        default: ""
+
+      # Reporting
+      display_report:
+        description: "Show full Claude Code Report in GitHub Job Summary"
+        type: string
+        default: "true"
+      dry_run:
+        description: "Validate inputs and compose prompts without invoking Claude"
+        type: string
+        default: "false"
+
+      # UX configuration
+      tracking_comment:
+        description: "Create a tracking comment for progress updates (true/false)"
+        type: string
+        default: "true"
+      reaction_emoji:
+        description: "Emoji to react with on triggering comment"
+        type: string
+        default: "rocket"
+
+      # Infrastructure
+      gh_cli_version:
+        description: "Version of gh CLI to install on the runner"
+        type: string
+        default: "2.87.3"
+
+    secrets:
+      claude_code_oauth_token:
+        description: "Claude Code OAuth token (subscription billing)"
+        required: false
+      anthropic_api_key:
+        description: "Anthropic API key (per-token billing)"
+        required: false
+      app_id:
+        description: "GitHub App ID for elevated permissions"
+        required: false
+      app_private_key:
+        description: "GitHub App private key (PEM format)"
+        required: false
+
+jobs:
+  # Job 1: React and create a tracking comment
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    outputs:
+      comment_id: ${{ steps.create-comment.outputs.comment_id }}
+      issue_number: ${{ steps.meta.outputs.issue_number }}
+    steps:
+      - name: Extract issue/PR number
+        id: meta
+        run: |
+          ISSUE_NUM="${{ github.event.issue.number || github.event.pull_request.number || '' }}"
+          echo "issue_number=${ISSUE_NUM}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Add reaction to triggering comment
+        if: >-
+          inputs.reaction_emoji != ''
+          && (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment')
+        run: |
+          gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content='${{ inputs.reaction_emoji }}'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+
+      - name: Create tracking comment
+        id: create-comment
+        if: inputs.tracking_comment == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ steps.meta.outputs.issue_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          BODY='<div data-claude-tracking-comment hidden></div>'
+          BODY="${BODY}"$'\n'"## Status: Initializing"
+          BODY="${BODY}"$'\n\n'"**Run:** [View workflow run](${RUN_URL})"
+          BODY="${BODY}"$'\n\n'"Claude is initializing..."
+          COMMENT_ID=$(gh api \
+            --method POST \
+            "/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/comments" \
+            -f body="${BODY}" \
+            --jq '.id')
+          echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  # Job 2: Run Claude
+  claude-run:
+    runs-on: ${{ inputs.runner }}
+    needs: setup
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install gh CLI
+        uses: dev-hanz-ops/install-gh-cli-action@af38ce09b1ec248aeb08eea2b16bbecea9e059f8 # v0.2.1
+        with:
+          gh-cli-version: ${{ inputs.gh_cli_version }}
+
+      - name: Run Claude
+        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        with:
+          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          app_id: ${{ secrets.app_id }}
+          app_private_key: ${{ secrets.app_private_key }}
+          trigger_phrase: ${{ inputs.trigger_phrase }}
+          assignee_trigger: ${{ inputs.assignee_trigger }}
+          label_trigger: ${{ inputs.label_trigger }}
+          allowed_bots: ${{ inputs.allowed_bots }}
+          notify_owners: ${{ inputs.notify_owners }}
+          compose_prompt: ${{ inputs.compose_prompt }}
+          agent_name: ${{ inputs.agent_name }}
+          model: ${{ inputs.model }}
+          max_turns: ${{ inputs.max_turns }}
+          timeout_minutes: ${{ inputs.timeout_minutes }}
+          allowed_tools: ${{ inputs.allowed_tools }}
+          disallowed_tools: ${{ inputs.disallowed_tools }}
+          claude_args: ${{ inputs.claude_args }}
+          settings: ${{ inputs.settings }}
+          additional_permissions: ${{ inputs.additional_permissions }}
+          extra_instructions_path: ${{ inputs.extra_instructions_path }}
+          extra_agents_path: ${{ inputs.extra_agents_path }}
+          display_report: ${{ inputs.display_report }}
+          dry_run: ${{ inputs.dry_run }}
+          issue_comment_id: ${{ needs.setup.outputs.comment_id }}

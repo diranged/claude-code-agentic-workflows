@@ -1,7 +1,7 @@
 name: "Test: Claude Respond"
 
 on:
-  # PR comment triggers — issue comments are handled by claude-issue.yml
+  # PR comment triggers — issue comments are handled by repo-claude-responder.yml
   pull_request_review_comment:
     types: [created]
 

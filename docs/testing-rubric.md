@@ -20,7 +20,7 @@ Each scenario specifies the trigger, expected behavior, and pass/fail criteria.
 > and exits with code 0. Include a basic test.
 
 **Expected behavior:**
-1. ✅ Workflow triggers (`claude-issue.yml` → `detect-intent` → `agentic-designer`)
+1. ✅ Workflow triggers (`repo-claude-responder.yml` → `shared-claude-responder.yml` → `agentic-designer`)
 2. ✅ 🚀 reaction appears on the `@claude` comment
 3. ✅ Tracking comment created with "Initializing" status and run link
 4. ✅ Claude runs the designer agent (read-only, no code changes)
@@ -94,10 +94,10 @@ Each scenario specifies the trigger, expected behavior, and pass/fail criteria.
 **Trigger:** Comment `@claude` on a pull request
 
 **Expected behavior:**
-- `claude-issue.yml` should NOT trigger (it filters out PR-linked issues)
-- The existing `test-claude-respond.yml` may handle this separately
+- `repo-claude-responder.yml` should NOT trigger (it filters out PR-linked issues)
+- The existing `repo-test-claude-respond.yml` may handle this separately
 
-**Pass criteria:** `claude-issue.yml` does not run
+**Pass criteria:** `repo-claude-responder.yml` does not run
 
 ---
 

@@ -20,6 +20,15 @@ GitHub Actions composite actions for agentic Claude Code workflows. This reposit
 
 ```
 claude-code-agentic-workflows/
+├── .github/workflows/
+│   ├── shared-claude-responder.yml   # Reusable: @claude mention handler
+│   ├── shared-claude-engineers.yml   # Reusable: claude:* label lifecycle
+│   ├── repo-claude-responder.yml     # Internal: calls shared responder
+│   ├── repo-claude-engineers.yml     # Internal: calls shared engineers
+│   ├── repo-engineer-managers.yml    # Internal: scheduled engineer personalities
+│   ├── repo-conventional-commit.yml  # Internal: PR title validation
+│   ├── repo-test.yml                 # Internal: unit tests
+│   └── repo-test-claude-respond.yml  # Internal: manual Claude testing
 ├── claude-core/          # Core execution action
 │   ├── action.yml
 │   ├── agents/           # Built-in agent personalities (7 agents)
@@ -35,6 +44,29 @@ claude-code-agentic-workflows/
 ├── scripts/              # Repo-level utility scripts
 ├── tests/                # Test suite
 └── docs/                 # Project documentation
+```
+
+### Workflow Architecture
+
+Workflows follow a `shared-*` / `repo-*` naming convention:
+
+- **`shared-*`** — Reusable workflows (`workflow_call`) consumed by other repositories
+- **`repo-*`** — Internal workflows specific to this repository
+
+Consuming repositories create thin caller workflows that invoke the shared workflows with their own configuration:
+
+```yaml
+# Example: consuming repo's .github/workflows/claude-responder.yml
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  respond:
+    uses: diranged/claude-code-agentic-workflows/.github/workflows/shared-claude-responder.yml@v0
+    with:
+      runner: my-self-hosted-runner
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
 ```
 
 ### Authentication Strategy
@@ -126,7 +158,7 @@ Engineer agents operate autonomously with dashboard management:
 - **Use conventional commits** for ALL commit messages and PR titles. This is enforced by CI.
   - Format: `type(scope): description`
   - The description (subject) MUST start with a lowercase letter
-  - **Before creating any commit or PR**, read `.github/workflows/pr-conventional-commit.yml` to discover the valid types and scopes. That file is the single source of truth — do not guess.
+  - **Before creating any commit or PR**, read `.github/workflows/repo-conventional-commit.yml` to discover the valid types and scopes. That file is the single source of truth — do not guess.
 - PRs use squash merge only — the PR title becomes the commit message, so it MUST be conventional
 
 ### CI Checks — Reading and Fixing Failures
@@ -156,13 +188,26 @@ Engineer agents operate autonomously with dashboard management:
 
 ### Key Design Decisions
 
-1. **Composite Actions Only:** No reusable workflows to avoid `.github/workflows/` constraints for consumers
-2. **Public Repository Required:** GitHub only allows cross-org `uses:` references to public repos
-3. **OAuth-First Auth:** Enables cost-effective automation for Claude Max subscribers
-4. **Modular Prompt System:** Composable instructions/skills/agents for consistency and customization
-5. **Dashboard Management:** Persistent context for long-running autonomous operations
+1. **Composite Actions + Reusable Workflows:** Actions provide building blocks; shared workflows provide batteries-included orchestration
+2. **`shared-*` / `repo-*` Convention:** Clear separation between reusable and internal workflows
+3. **Public Repository Required:** GitHub only allows cross-org `uses:` references to public repos
+4. **OAuth-First Auth:** Enables cost-effective automation for Claude Max subscribers
+5. **Modular Prompt System:** Composable instructions/skills/agents for consistency and customization
+6. **Dashboard Management:** Persistent context for long-running autonomous operations
 
 ## Important File Locations
+
+### Reusable Workflows (consumed by other repos)
+- `.github/workflows/shared-claude-responder.yml` — Handles @claude mentions and issue assignment
+- `.github/workflows/shared-claude-engineers.yml` — Handles claude:* label lifecycle and CI retry
+
+### Internal Workflows (this repo only)
+- `.github/workflows/repo-claude-responder.yml` — Calls shared responder with our config
+- `.github/workflows/repo-claude-engineers.yml` — Calls shared engineers with our config
+- `.github/workflows/repo-engineer-managers.yml` — Scheduled engineer personalities
+- `.github/workflows/repo-conventional-commit.yml` — PR title validation
+- `.github/workflows/repo-test.yml` — Unit tests
+- `.github/workflows/repo-test-claude-respond.yml` — Manual Claude testing
 
 ### Action Specifications
 - `claude-core/action.yml` — Core action with comprehensive inputs

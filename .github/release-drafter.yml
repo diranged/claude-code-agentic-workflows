@@ -1,0 +1,70 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feat'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+  - title: '📖 Documentation'
+    labels:
+      - 'docs'
+  - title: '🧪 Tests'
+    labels:
+      - 'test'
+  - title: '🔧 Maintenance'
+    labels:
+      - 'chore'
+      - 'refactor'
+      - 'ci'
+
+version-resolver:
+  major:
+    labels:
+      - 'breaking'
+  minor:
+    labels:
+      - 'feat'
+  patch:
+    labels:
+      - 'fix'
+      - 'docs'
+      - 'test'
+      - 'chore'
+      - 'refactor'
+      - 'ci'
+  default: patch
+
+autolabeler:
+  - label: 'feat'
+    title:
+      - '/^feat(\(.+\))?:/'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.+\))?:/'
+  - label: 'docs'
+    title:
+      - '/^docs(\(.+\))?:/'
+  - label: 'test'
+    title:
+      - '/^test(\(.+\))?:/'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?:/'
+  - label: 'refactor'
+    title:
+      - '/^refactor(\(.+\))?:/'
+  - label: 'ci'
+    title:
+      - '/^ci(\(.+\))?:/'
+
+exclude-labels:
+  - 'skip-changelog'

@@ -34,7 +34,13 @@ Always include the workflow run link in your tracking comment so reviewers can i
 
 ## Advancing the Pipeline
 
-After posting your design, advance the issue to architecture review:
+After posting your design, check whether the issue has the `claude:auto_advance` label:
+
+```bash
+gh issue view $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' | grep -q '^claude:auto_advance$'
+```
+
+### If `claude:auto_advance` IS present (automated pipeline):
 
 1. Remove the `claude:design` label (if present):
    ```bash
@@ -44,14 +50,22 @@ After posting your design, advance the issue to architecture review:
    ```bash
    gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --add-label "claude:review"
    ```
+3. End the design with:
+   > Design posted. Auto-advancing to architecture review.
 
-This hands the issue to the architect agent for design review before implementation.
+### If `claude:auto_advance` is NOT present (human-gated pipeline):
 
-## Footer
-
-End the design with:
-
-> Design posted. Advancing to architecture review.
+1. Remove the `claude:design` label (if present):
+   ```bash
+   gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --remove-label "claude:design"
+   ```
+2. Do **not** apply any pipeline labels.
+3. Set the status to "Needs Input" and assign notify owners per the GitHub Environment instructions.
+4. End the design with:
+   > Design posted. Waiting for human review.
+   >
+   > To advance to architecture review, apply the `claude:review` label.
+   > To skip review and go straight to implementation, apply the `claude:implement` label.
 
 ## Constraints
 

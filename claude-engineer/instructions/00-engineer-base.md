@@ -83,6 +83,7 @@ If no open issue exists, create one:
 gh label create "<dashboard_label>" --repo "$GITHUB_REPOSITORY" --description "Engineer dashboard" --color "0075ca" 2>/dev/null || true
 gh label create "<task_label>" --repo "$GITHUB_REPOSITORY" --description "Work item from engineer" --color "c5def5" 2>/dev/null || true
 gh label create "<delegation_label>" --repo "$GITHUB_REPOSITORY" --description "Trigger Claude design pipeline" --color "5319e7" 2>/dev/null || true
+gh label create "claude:auto_advance" --repo "$GITHUB_REPOSITORY" --description "Auto-advance through design/review/implement pipeline" --color "bfd4f2" 2>/dev/null || true
 
 # Create dashboard
 gh issue create --repo "$GITHUB_REPOSITORY" \
@@ -168,11 +169,11 @@ By the time you create an issue, Phase 3 has already confirmed the finding is ne
 
 1. **Create a focused issue** with a clear title and description including file paths and line references where relevant.
 
-2. **Delegate to the design pipeline** by adding the delegation label:
+2. **Delegate to the design pipeline** by adding the delegation label and the `claude:auto_advance` label:
    ```bash
-   gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "<delegation_label>"
+   gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "<delegation_label>" --add-label "claude:auto_advance"
    ```
-   This triggers the design → review → implement pipeline.
+   The `claude:auto_advance` label tells the pipeline to proceed through design → review → implement without waiting for human approval at each stage. Issues created by engineer agents are trusted to run autonomously.
 
 ## Constraints
 

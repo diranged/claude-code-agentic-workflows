@@ -82,6 +82,12 @@ on:
         type: string
         default: "claude-opus-4-20250514"
 
+      # Concurrency control
+      max_implementations:
+        description: "Maximum concurrent implementations (issues with implement label + open Claude PRs). 0 = unlimited."
+        type: string
+        default: "0"
+
       # CI retry configuration
       ci_retry:
         description: "Enable CI retry mode (set to 'true' when called from workflow_run)"
@@ -227,11 +233,90 @@ jobs:
           esac
         shell: bash
 
-  # Job 2: Create a tracking comment
-  setup:
+  # Job 2: Check implementation concurrency before running the developer
+  concurrency-gate:
     runs-on: ubuntu-latest
     needs: detect-intent
     if: inputs.ci_retry != 'true'
+    permissions:
+      issues: write
+      pull-requests: read
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check implementation concurrency
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_IMPL: ${{ inputs.max_implementations }}
+          LABEL_PREFIX: ${{ inputs.label_prefix }}
+          ISSUE_NUMBER: ${{ needs.detect-intent.outputs.issue_number }}
+          DETECTED_AGENT: ${{ needs.detect-intent.outputs.agent }}
+        run: |
+          # Only gate implement agents; design and review always proceed
+          if [ "$DETECTED_AGENT" != "${{ inputs.implement_agent }}" ]; then
+            echo "Not an implementation run — skipping concurrency check"
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 0 means unlimited
+          if [ "$MAX_IMPL" = "0" ]; then
+            echo "No concurrency limit set"
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Count issues with the implement label (excluding this one, since the label was just applied)
+          IMPL_ISSUES=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "${LABEL_PREFIX}:implement" \
+            --state open \
+            --json number \
+            --jq "[.[] | select(.number != ${ISSUE_NUMBER})] | length")
+
+          # Count open PRs authored by Claude bots
+          CLAUDE_PRS=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --json number,author \
+            --jq '[.[] | select(.author.login | test("claude|\\[bot\\]"))] | length')
+
+          TOTAL=$((IMPL_ISSUES + CLAUDE_PRS))
+          echo "Implementation slots: ${TOTAL}/${MAX_IMPL} in use (${IMPL_ISSUES} implementing + ${CLAUDE_PRS} open PRs)"
+
+          if [ "$TOTAL" -ge "$MAX_IMPL" ]; then
+            echo "Concurrency limit reached — queuing implementation"
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+
+            # Remove the implement label so it can be re-applied later
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --remove-label "${LABEL_PREFIX}:implement"
+
+            # Add a queued label
+            gh label create "${LABEL_PREFIX}:queued" \
+              --repo "${{ github.repository }}" \
+              --description "Implementation approved but waiting for a slot" \
+              --color "fbca04" 2>/dev/null || true
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --add-label "${LABEL_PREFIX}:queued"
+
+            # Post a comment explaining why
+            gh issue comment "$ISSUE_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --body "Implementation queued — ${TOTAL}/${MAX_IMPL} slots in use. Will be picked up when a slot opens."
+          else
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+  # Job 3: Create a tracking comment
+  setup:
+    runs-on: ubuntu-latest
+    needs: [detect-intent, concurrency-gate]
+    if: inputs.ci_retry != 'true' && needs.concurrency-gate.outputs.allowed == 'true'
     permissions:
       issues: write
       pull-requests: write
@@ -258,11 +343,11 @@ jobs:
           echo "comment_id=$COMMENT_ID" >> "$GITHUB_OUTPUT"
         shell: bash
 
-  # Job 3: Run Claude with the routed agent
+  # Job 4: Run Claude with the routed agent
   claude-run:
     runs-on: ${{ inputs.runner }}
-    needs: [detect-intent, setup]
-    if: inputs.ci_retry != 'true'
+    needs: [detect-intent, concurrency-gate, setup]
+    if: inputs.ci_retry != 'true' && needs.concurrency-gate.outputs.allowed == 'true'
     permissions:
       contents: write
       issues: write
@@ -297,8 +382,12 @@ jobs:
           display_report: ${{ inputs.display_report }}
           dry_run: ${{ inputs.dry_run }}
           issue_comment_id: ${{ needs.setup.outputs.comment_id }}
+          prompt: |
+            ## Concurrency Configuration
+            - Max concurrent implementations: ${{ inputs.max_implementations }} (0 = unlimited)
+            - Label prefix: ${{ inputs.label_prefix }}
 
-  # Job 4: CI retry — re-trigger developer when CI fails on a Claude-authored PR
+  # Job 5: CI retry — re-trigger developer when CI fails on a Claude-authored PR
   ci-retry:
     runs-on: ubuntu-latest
     if: inputs.ci_retry == 'true'

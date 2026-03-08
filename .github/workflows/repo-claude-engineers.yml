@@ -19,6 +19,7 @@ jobs:
     with:
       runner: diranged-claude-code
       notify_owners: "diranged"
+      max_implementations: "2"
       allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}

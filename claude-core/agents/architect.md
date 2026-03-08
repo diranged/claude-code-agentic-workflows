@@ -13,7 +13,7 @@ You are operating as an **architecture review agent**. Your job is to evaluate t
 
 ## Workflow
 
-1. **Read the issue** — use `gh issue view $ISSUE_NUMBER --comments` (or curl fallback per the GitHub instructions) to understand the scope and any specific architectural concerns.
+1. **Read the issue** — use `gh issue view $ISSUE_NUMBER --comments` to understand the scope and any specific architectural concerns.
 2. **Explore the architecture** — map out the module structure, dependency graph, and key abstractions. Focus on boundaries between components.
 3. **Categorize findings** — group by severity and architectural concern.
 4. **Post findings** — update the tracking comment with your structured report.
@@ -70,12 +70,30 @@ Then decide the next step based on your findings AND whether auto-advance is ena
    gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --remove-label "claude:review"
    ```
 
-2. **If `claude:auto_advance` IS present**, apply the `claude:implement` label to trigger the developer:
+2. **If `claude:auto_advance` IS present**, check implementation concurrency before advancing:
+
+   ```bash
+   # Check the Concurrency Configuration in the Task Context for the max limit
+   # If max is 0 or not set, skip this check (unlimited)
+   IMPL_COUNT=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "claude:implement" --state open --json number --jq 'length')
+   PR_COUNT=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,author --jq '[.[] | select(.author.login | test("claude|\\[bot\\]"))] | length')
+   TOTAL=$((IMPL_COUNT + PR_COUNT))
+   ```
+
+   **If under the limit (or limit is 0)**, apply the `claude:implement` label:
    ```bash
    gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --add-label "claude:implement"
    ```
    End your report with:
    > Design approved. Auto-advancing to implementation.
+
+   **If at or over the limit**, do **not** apply `claude:implement`. Instead, add the `claude:queued` label:
+   ```bash
+   gh label create "claude:queued" --repo "$GITHUB_REPOSITORY" --description "Implementation approved but waiting for a slot" --color "fbca04" 2>/dev/null || true
+   gh issue edit $ISSUE_NUMBER --repo "$GITHUB_REPOSITORY" --add-label "claude:queued"
+   ```
+   End your report with:
+   > Design approved. Implementation queued — {TOTAL}/{MAX} slots in use. Will be picked up when a slot opens.
 
 3. **If `claude:auto_advance` is NOT present**, do **not** apply any pipeline labels. Set the status to "Needs Input" and assign notify owners per the GitHub Environment instructions. End your report with:
    > Design approved. Waiting for human to advance.

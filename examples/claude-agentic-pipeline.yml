@@ -4,10 +4,15 @@
 # through a structured process: claude:design → claude:review → claude:implement.
 # Each stage uses specialized agents optimized for that phase of development.
 #
-# Pipeline Flow:
+# Pipeline Flow (Manual Mode):
 # 1. Apply "claude:design" label → Agentic Designer creates implementation plan
 # 2. Apply "claude:review" label → Architect reviews and approves the design
 # 3. Apply "claude:implement" label → Agentic Developer implements the approved design
+#
+# Pipeline Flow (Automated Mode):
+# 1. Apply "claude:design" + "claude:auto_advance" → Designer creates plan and auto-advances
+# 2. Architect automatically reviews and advances to implementation (with concurrency gating)
+# 3. Developer implements the approved design
 #
 # Copy this file to .github/workflows/ and customize the configuration below.
 
@@ -116,7 +121,7 @@ jobs:
 
       - name: Execute pipeline stage
         # Use @main for development, pin to @v0 for production
-        uses: diranged/claude-code-agentic-workflows/claude-respond@main
+        uses: diranged/claude-code-agentic-workflows/claude-respond@v0
         with:
           # Primary authentication - Claude Code OAuth token (recommended)
           claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
@@ -157,11 +162,18 @@ jobs:
 # - Labels should be applied manually or via automation based on your workflow
 # - Remove previous stage labels to keep issues clean (e.g., remove claude:design after claude:review)
 # - The pipeline automatically handles agent routing based on current labels
+# - For automated progression, add "claude:auto_advance" with the initial stage label
+#
+# Pipeline Modes:
+# - Manual Mode: Human approval required at each stage (claude:design → human applies claude:review → human applies claude:implement)
+# - Automated Mode: Add "claude:auto_advance" for autonomous progression with concurrency gating via "claude:queued"
 #
 # Stage Descriptions:
 # - claude:design    → Creates detailed implementation plans and architecture designs
 # - claude:review    → Reviews designs for architectural soundness and best practices
 # - claude:implement → Implements approved designs with full development workflow
+# - claude:auto_advance → Enables automatic stage progression without human gates
+# - claude:queued    → Applied when implementation slots are full during auto-advance
 #
 # Customization:
 # - Adjust model selection in claude-core/scripts/detect_intent.sh for your needs

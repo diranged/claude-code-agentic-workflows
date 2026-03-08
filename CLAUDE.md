@@ -124,6 +124,22 @@ The agent search path is action-specific based on the `extra_agents_path` input:
 
 This allows consuming repositories to customize agent behavior without modifying the actions themselves.
 
+### Pipeline Labels
+
+The agent system uses labels for workflow automation:
+
+| Label | Purpose | Usage |
+|-------|---------|-------|
+| `claude:design` | Triggers design phase | Applied to issues requiring implementation planning |
+| `claude:review` | Triggers architecture review | Applied after design completion for review |
+| `claude:implement` | Triggers implementation phase | Applied after design approval for development |
+| `claude:auto_advance` | Enables automatic pipeline progression | Automatically advances through design → review → implement stages |
+| `claude:queued` | Implementation concurrency gating | Applied when implementation slots are full during auto-advance |
+
+**Manual Mode:** Issues require human approval at each stage (design → human applies review → human applies implement).
+
+**Automated Mode:** Adding `claude:auto_advance` enables autonomous progression. The designer auto-advances to architect review, and the architect auto-advances to implementation with concurrency checking.
+
 ## Prompt Composition System
 
 When `compose_prompt: true`, the system builds sophisticated prompts by combining:

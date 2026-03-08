@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from generate_summary import format_cost, format_duration, generate_summary, parse_execution
+from generate_summary import format_cost, format_duration, generate_summary, parse_execution, validate_file_path
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -72,6 +72,98 @@ class TestParseExecution(unittest.TestCase):
             data = json.load(f)
         metrics = parse_execution(data)
         self.assertGreater(metrics["total_cost_usd"], 0)
+
+
+class TestValidateFilePath(unittest.TestCase):
+    def setUp(self):
+        """Store original environment and create temp dirs for testing."""
+        self.original_env = {}
+        for env_var in ("GITHUB_WORKSPACE", "RUNNER_TEMP", "GITHUB_ACTION_PATH"):
+            self.original_env[env_var] = os.environ.get(env_var)
+            if env_var in os.environ:
+                del os.environ[env_var]
+
+    def tearDown(self):
+        """Restore original environment."""
+        for env_var, value in self.original_env.items():
+            if value is not None:
+                os.environ[env_var] = value
+            elif env_var in os.environ:
+                del os.environ[env_var]
+
+    def test_validate_file_path_within_cwd(self):
+        """A temp file in CWD passes validation (no env vars set)."""
+        # Create a temporary file in the current working directory, not /tmp
+        with tempfile.NamedTemporaryFile(dir=".", delete=False) as f:
+            temp_path = f.name
+        try:
+            validated_path = validate_file_path(temp_path)
+            self.assertEqual(os.path.realpath(temp_path), validated_path)
+        finally:
+            os.unlink(temp_path)
+
+    def test_validate_file_path_in_workspace(self):
+        """A file under GITHUB_WORKSPACE passes validation."""
+        with tempfile.TemporaryDirectory() as workspace:
+            os.environ["GITHUB_WORKSPACE"] = workspace
+            test_file = os.path.join(workspace, "test.json")
+            with open(test_file, "w") as f:
+                f.write("{}")
+            try:
+                validated_path = validate_file_path(test_file)
+                self.assertEqual(os.path.realpath(test_file), validated_path)
+            finally:
+                os.unlink(test_file)
+
+    def test_validate_file_path_in_runner_temp(self):
+        """A file under RUNNER_TEMP passes validation."""
+        with tempfile.TemporaryDirectory() as runner_temp:
+            os.environ["RUNNER_TEMP"] = runner_temp
+            test_file = os.path.join(runner_temp, "execution.json")
+            with open(test_file, "w") as f:
+                f.write("[]")
+            try:
+                validated_path = validate_file_path(test_file)
+                self.assertEqual(os.path.realpath(test_file), validated_path)
+            finally:
+                os.unlink(test_file)
+
+    def test_validate_file_path_traversal_rejected(self):
+        """Path like ../../etc/passwd is rejected when it resolves outside allowed dirs."""
+        with tempfile.TemporaryDirectory() as workspace:
+            os.environ["GITHUB_WORKSPACE"] = workspace
+            # Try to access a file outside the workspace via path traversal
+            traversal_path = os.path.join(workspace, "..", "..", "etc", "passwd")
+            with self.assertRaises(ValueError) as context:
+                validate_file_path(traversal_path)
+            self.assertIn("outside allowed directories", str(context.exception))
+
+    def test_validate_file_path_symlink_resolved(self):
+        """Symlink pointing outside allowed dir is rejected."""
+        with tempfile.TemporaryDirectory() as workspace:
+            with tempfile.TemporaryDirectory() as outside_dir:
+                os.environ["GITHUB_WORKSPACE"] = workspace
+                # Create a file outside the workspace
+                outside_file = os.path.join(outside_dir, "external.json")
+                with open(outside_file, "w") as f:
+                    f.write("{}")
+                # Create a symlink inside workspace pointing to the external file
+                symlink_path = os.path.join(workspace, "symlink.json")
+                os.symlink(outside_file, symlink_path)
+                try:
+                    with self.assertRaises(ValueError) as context:
+                        validate_file_path(symlink_path)
+                    self.assertIn("outside allowed directories", str(context.exception))
+                finally:
+                    os.unlink(symlink_path)
+                    os.unlink(outside_file)
+
+    def test_validate_file_path_equals_allowed_directory(self):
+        """File path that equals the allowed directory itself is accepted."""
+        with tempfile.TemporaryDirectory() as workspace:
+            os.environ["GITHUB_WORKSPACE"] = workspace
+            validated_path = validate_file_path(workspace)
+            self.assertEqual(os.path.realpath(workspace), validated_path)
 
 
 class TestGenerateSummary(unittest.TestCase):
@@ -162,6 +254,28 @@ class TestGenerateSummary(unittest.TestCase):
         path = os.path.join(FIXTURES_DIR, "single_model.json")
         output = generate_summary(path, "sess-fail", "failure")
         self.assertIn("\u274c Failed", output)
+
+    def test_generate_summary_traversal_fallback(self):
+        """generate_summary() with a traversal path returns the fallback summary (graceful degradation)."""
+        with tempfile.TemporaryDirectory() as workspace:
+            # Set up GITHUB_WORKSPACE to restrict allowed directories
+            old_workspace = os.environ.get("GITHUB_WORKSPACE")
+            os.environ["GITHUB_WORKSPACE"] = workspace
+            try:
+                # Try to use a traversal path that goes outside the workspace
+                traversal_path = os.path.join(workspace, "..", "..", "etc", "passwd")
+                output = generate_summary(traversal_path, "sess-traversal", "success")
+                # Should get fallback summary due to path validation failure
+                self.assertIn("\u2705 Success", output)
+                self.assertIn("No execution file found", output)
+                self.assertNotIn("Token Usage", output)
+                self.assertIn("sess-traversal", output)
+            finally:
+                # Restore original environment
+                if old_workspace is not None:
+                    os.environ["GITHUB_WORKSPACE"] = old_workspace
+                elif "GITHUB_WORKSPACE" in os.environ:
+                    del os.environ["GITHUB_WORKSPACE"]
 
 
 if __name__ == "__main__":

@@ -102,6 +102,7 @@ Dual-path authentication with OAuth preference:
 |-------|---------|---------------------|
 | `docs-engineer` | Autonomous documentation maintenance | Creates persistent dashboard issues, rotates tasks |
 | `code-janitor` | Repository cleanup and maintenance automation | Creates persistent dashboard issues, rotates tasks |
+| `security-engineer` | Security hygiene and vulnerability detection | Creates persistent dashboard issues, rotates tasks |
 
 ### Agent-specific Agents (claude-agent/agents/)
 
@@ -234,7 +235,7 @@ Engineer agents operate autonomously with dashboard management:
 
 ### Agent Definitions
 - `claude-core/agents/` — 7 built-in agent personalities
-- `claude-engineer/agents/` — Engineer-specific agents (docs-engineer, code-janitor)
+- `claude-engineer/agents/` — Engineer-specific agents (docs-engineer, code-janitor, security-engineer)
 - `claude-agent/agents/` — Agent-specific agents (security-auditor)
 - `.github/claude-agents/` — Repository-local overrides (in consuming repos)
 

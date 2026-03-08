@@ -4,7 +4,6 @@ import os
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import patch
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "scripts", "label_pr_size.sh")
 

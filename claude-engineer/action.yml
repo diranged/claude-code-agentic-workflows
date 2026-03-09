@@ -40,6 +40,10 @@ inputs:
     description: "Label that starts the design pipeline on delegated issues."
     required: false
     default: "claude:design"
+  max_implementations:
+    description: "Maximum concurrent implementations to allow. Engineer will only promote this many issues to auto_advance at a time. 0 = unlimited."
+    required: false
+    default: "2"
   rotation_days:
     description: "Number of days before rotating the dashboard issue."
     required: false
@@ -95,5 +99,6 @@ runs:
           - Dashboard label: ${{ inputs.dashboard_label }}
           - Task label: ${{ inputs.task_label }}
           - Delegation label: ${{ inputs.delegation_label }}
+          - Max implementations: ${{ inputs.max_implementations }}
           - Rotation days: ${{ inputs.rotation_days }}
           - Force rotation: ${{ inputs.force_rotation }}

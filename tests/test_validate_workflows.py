@@ -61,6 +61,54 @@ class TestValidateWorkflows(unittest.TestCase):
             self.assertIn("PASS:", result.stdout)
             self.assertIn("workflow.yaml", result.stdout)
 
+    def test_rejects_invalid_python_executable(self):
+        """Test that script rejects PYTHON values containing shell metacharacters."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a valid YAML file (doesn't matter for this test since we're testing the security validation)
+            yaml_file = os.path.join(tmpdir, "workflow.yml")
+            with open(yaml_file, "w") as f:
+                f.write("name: test\non: push\n")
+
+            # Attempt injection via PYTHON environment variable
+            result = subprocess.run(
+                ["bash", SCRIPT, tmpdir],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PYTHON": "python3; echo pwned"},
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("is not a valid executable", result.stderr)
+
+    def test_rejects_non_python_executable(self):
+        """Test that script rejects PYTHON pointing to non-Python executables."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a valid YAML file
+            yaml_file = os.path.join(tmpdir, "workflow.yml")
+            with open(yaml_file, "w") as f:
+                f.write("name: test\non: push\n")
+
+            # Try to use bash instead of python
+            result = subprocess.run(
+                ["bash", SCRIPT, tmpdir],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PYTHON": "bash"},
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("does not resolve to a python3 executable", result.stderr)
+
+    def test_rejects_path_traversal_in_workflows_dir(self):
+        """Test that script rejects WORKFLOWS_DIR containing path traversal."""
+        # Attempt directory traversal
+        result = subprocess.run(
+            ["bash", SCRIPT, "../../etc"],
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHON": sys.executable},
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("WORKFLOWS_DIR cannot contain '..'", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

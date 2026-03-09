@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 from collections import defaultdict
 
@@ -70,6 +71,40 @@ def format_cost(cost):
     return f"${cost:.4f}"
 
 
+def validate_file_path(file_path):
+    """Validate that file_path is within an allowed directory.
+
+    Allowed directories (from environment variables):
+    - GITHUB_WORKSPACE (repository checkout)
+    - RUNNER_TEMP (temporary files)
+    - GITHUB_ACTION_PATH (action directory)
+
+    Falls back to current working directory if no env vars are set.
+    Returns the resolved absolute path, or raises ValueError.
+    """
+    abs_file = os.path.realpath(file_path)
+
+    allowed_dirs = []
+    for env_var in ("GITHUB_WORKSPACE", "RUNNER_TEMP", "GITHUB_ACTION_PATH"):
+        val = os.environ.get(env_var)
+        if val:
+            allowed_dirs.append(os.path.realpath(val))
+
+    # Fallback: allow current working directory
+    if not allowed_dirs:
+        allowed_dirs.append(os.path.realpath("."))
+
+    for allowed in allowed_dirs:
+        # Use os.sep to prevent prefix matching attacks (e.g., /tmp vs /tmp2)
+        if abs_file == allowed or abs_file.startswith(allowed + os.sep):
+            return abs_file
+
+    raise ValueError(
+        f"File path '{file_path}' resolves to '{abs_file}' which is outside "
+        f"allowed directories: {allowed_dirs}"
+    )
+
+
 def generate_summary(execution_file, session_id, outcome):
     """Generate the full markdown summary and return it as a string."""
     status = "\u2705 Success" if outcome == "success" else "\u274c Failed"
@@ -79,11 +114,12 @@ def generate_summary(execution_file, session_id, outcome):
     data = None
     if execution_file:
         try:
-            with open(execution_file) as f:
+            validated_path = validate_file_path(execution_file)
+            with open(validated_path) as f:
                 data = json.load(f)
             if not isinstance(data, list):
                 data = None
-        except (OSError, json.JSONDecodeError, TypeError):
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
             data = None
 
     if data is None:

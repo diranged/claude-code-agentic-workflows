@@ -20,11 +20,14 @@ if [ -z "${DASHBOARD_LABEL:-}" ]; then
   exit 0
 fi
 
-# Query GitHub API for open issues with the dashboard label
-API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/issues?labels=${DASHBOARD_LABEL}&state=open&per_page=1"
-
-# Use curl to query the API
-RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" 2>/dev/null || echo "[]")
+# Query GitHub API for open issues with the dashboard label using gh CLI
+# which handles URL encoding automatically
+RESPONSE=$(gh issue list \
+  --repo "$GITHUB_REPOSITORY" \
+  --label "$DASHBOARD_LABEL" \
+  --state open \
+  --limit 1 \
+  --json number,title 2>/dev/null || echo "[]")
 
 # Parse response with python3 to check if any issues exist
 RESULT=$(echo "$RESPONSE" | python3 -c "

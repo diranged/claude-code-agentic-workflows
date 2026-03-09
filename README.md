@@ -183,6 +183,8 @@ Generates concise execution summaries and uploads Claude Code execution logs as 
 | Agent | Purpose |
 |-------|---------|
 | **docs-engineer** | Autonomous documentation maintenance engineer |
+| **code-janitor** | Repository cleanup and maintenance automation engineer |
+| **security-engineer** | Security hygiene and vulnerability detection engineer |
 
 ### Agent-specific Agents (claude-agent/agents/)
 

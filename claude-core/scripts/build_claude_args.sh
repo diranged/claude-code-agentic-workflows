@@ -24,21 +24,37 @@
 #   1 - Failure (pipefail from unset GITHUB_OUTPUT or write error)
 set -euo pipefail
 
+# Input validation for structured fields (defense-in-depth)
+# Note: validate_inputs.sh provides format validation (MODEL must match ^claude-,
+# MAX_TURNS must be positive integer), while this function provides metacharacter
+# rejection for all structured fields to prevent shell injection issues.
+validate_arg() {
+  local name="$1" value="$2"
+  if [[ "$value" =~ [\;\|\&\$\`\<\>] ]] || [[ "$value" == *$'\n'* ]]; then
+    echo "ERROR: ${name} contains disallowed characters: ${value}" >&2
+    exit 1
+  fi
+}
+
 ARGS=""
 
 if [ -n "${MODEL:-}" ]; then
+  validate_arg "MODEL" "$MODEL"
   ARGS="$ARGS --model $MODEL"
 fi
 
 if [ -n "${MAX_TURNS:-}" ]; then
+  validate_arg "MAX_TURNS" "$MAX_TURNS"
   ARGS="$ARGS --max-turns $MAX_TURNS"
 fi
 
 if [ -n "${ALLOWED_TOOLS:-}" ]; then
+  validate_arg "ALLOWED_TOOLS" "$ALLOWED_TOOLS"
   ARGS="$ARGS --allowedTools $ALLOWED_TOOLS"
 fi
 
 if [ -n "${DISALLOWED_TOOLS:-}" ]; then
+  validate_arg "DISALLOWED_TOOLS" "$DISALLOWED_TOOLS"
   ARGS="$ARGS --disallowedTools $DISALLOWED_TOOLS"
 fi
 

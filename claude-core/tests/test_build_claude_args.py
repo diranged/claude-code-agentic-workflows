@@ -106,6 +106,82 @@ class TestBuildClaudeArgs(unittest.TestCase):
         args = outputs["args"]
         self.assertLess(args.index("--model"), args.index("--max-turns"))
 
+    # Input validation tests
+    def test_model_with_shell_metacharacters_rejected(self):
+        """MODEL containing semicolon should be rejected."""
+        rc, _, stderr, _ = run_script(
+            "build_claude_args.sh",
+            {"MODEL": "claude-test; rm -rf /"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: MODEL contains disallowed characters", stderr)
+
+    def test_max_turns_with_pipe_rejected(self):
+        """MAX_TURNS containing pipe should be rejected."""
+        rc, _, stderr, _ = run_script(
+            "build_claude_args.sh",
+            {"MAX_TURNS": "10 | malicious"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: MAX_TURNS contains disallowed characters", stderr)
+
+    def test_allowed_tools_with_backtick_rejected(self):
+        """ALLOWED_TOOLS containing backtick should be rejected."""
+        rc, _, stderr, _ = run_script(
+            "build_claude_args.sh",
+            {"ALLOWED_TOOLS": "bash,read`cmd`"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: ALLOWED_TOOLS contains disallowed characters", stderr)
+
+    def test_disallowed_tools_with_ampersand_rejected(self):
+        """DISALLOWED_TOOLS containing ampersand should be rejected."""
+        rc, _, stderr, _ = run_script(
+            "build_claude_args.sh",
+            {"DISALLOWED_TOOLS": "write & evil"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: DISALLOWED_TOOLS contains disallowed characters", stderr)
+
+    def test_model_with_newline_rejected(self):
+        """MODEL containing newline should be rejected."""
+        rc, _, stderr, _ = run_script(
+            "build_claude_args.sh",
+            {"MODEL": "claude-test\nmalicious"},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: MODEL contains disallowed characters", stderr)
+
+    def test_extra_args_not_validated(self):
+        """EXTRA_ARGS with special characters should still be accepted."""
+        rc, _, _, outputs = run_script(
+            "build_claude_args.sh",
+            {"EXTRA_ARGS": "--timeout 60; echo test"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertIn("--timeout 60; echo test", outputs["args"])
+
+    def test_valid_model_with_special_but_safe_chars(self):
+        """MODEL with hyphens, underscores, dots should pass validation."""
+        rc, _, _, outputs = run_script(
+            "build_claude_args.sh",
+            {"MODEL": "claude-sonnet-4-20250514"},
+        )
+        self.assertEqual(rc, 0)
+        self.assertIn("--model claude-sonnet-4-20250514", outputs["args"])
+
+    def test_all_metacharacters_rejected(self):
+        """Test that all dangerous metacharacters are rejected."""
+        dangerous_chars = [";", "|", "&", "$", "`", "<", ">"]
+        for char in dangerous_chars:
+            with self.subTest(char=char):
+                rc, _, stderr, _ = run_script(
+                    "build_claude_args.sh",
+                    {"MODEL": f"claude-test{char}evil"},
+                )
+                self.assertEqual(rc, 1)
+                self.assertIn("ERROR: MODEL contains disallowed characters", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

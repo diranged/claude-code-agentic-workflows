@@ -3,6 +3,12 @@ name: "Shared: Claude Engineers"
 # Reusable workflow for handling claude:* label triggers on issues.
 # Implements the design -> implement -> CI-retry lifecycle.
 #
+# Concurrency control: When max_implementations > 0, the workflow queues excess
+# implementations with a `claude:queued` label. After each implementation run
+# completes, a dequeue job automatically promotes the oldest queued issue(s).
+# Callers should ALSO add a `pull_request: closed` trigger with their own
+# dequeue job to handle PR merges that free up slots (see example below).
+#
 # Required caller permissions (must be granted by the calling job):
 #   contents: write, issues: write, pull-requests: write, id-token: write
 #
@@ -10,6 +16,8 @@ name: "Shared: Claude Engineers"
 #   on:
 #     issues:
 #       types: [labeled]
+#     pull_request:
+#       types: [closed]
 #     workflow_run:
 #       workflows: ["Tests"]
 #       types: [completed]
@@ -400,7 +408,83 @@ jobs:
             - Max concurrent implementations: ${{ inputs.max_implementations }} (0 = unlimited)
             - Label prefix: ${{ inputs.label_prefix }}
 
-  # Job 5: CI retry — re-trigger developer when CI fails on a Claude-authored PR
+  # Job 5: Dequeue — promote next queued issue(s) when a slot opens
+  dequeue:
+    runs-on: ubuntu-latest
+    needs: [claude-run]
+    if: always() && inputs.ci_retry != 'true' && inputs.max_implementations != '0'
+    permissions:
+      issues: write
+      pull-requests: read
+    steps:
+      - name: Promote queued issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_IMPL: ${{ inputs.max_implementations }}
+          LABEL_PREFIX: ${{ inputs.label_prefix }}
+        run: |
+          set -euo pipefail
+
+          # Count current implementations
+          IMPL_ISSUES=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "${LABEL_PREFIX}:implement" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          CLAUDE_PRS=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --json number,author \
+            --jq '[.[] | select(.author.login | test("claude|\\[bot\\]"))] | length')
+
+          TOTAL=$((IMPL_ISSUES + CLAUDE_PRS))
+          echo "Current slots: ${TOTAL}/${MAX_IMPL}"
+
+          if [ "$TOTAL" -ge "$MAX_IMPL" ]; then
+            echo "No slots available, skipping dequeue"
+            exit 0
+          fi
+
+          SLOTS_AVAILABLE=$((MAX_IMPL - TOTAL))
+
+          # Find oldest queued issues, promote up to available slots
+          QUEUED=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "${LABEL_PREFIX}:queued" \
+            --state open \
+            --json number,createdAt \
+            --jq 'sort_by(.createdAt) | .[].number')
+
+          if [ -z "$QUEUED" ]; then
+            echo "No queued issues to promote"
+            exit 0
+          fi
+
+          PROMOTED=0
+          for ISSUE_NUM in $QUEUED; do
+            if [ "$PROMOTED" -ge "$SLOTS_AVAILABLE" ]; then
+              break
+            fi
+
+            echo "Promoting issue #${ISSUE_NUM} from queue"
+            gh issue edit "$ISSUE_NUM" \
+              --repo "${{ github.repository }}" \
+              --remove-label "${LABEL_PREFIX}:queued" \
+              --add-label "${LABEL_PREFIX}:implement"
+
+            gh issue comment "$ISSUE_NUM" \
+              --repo "${{ github.repository }}" \
+              --body "Slot available — promoting from queue to implementation."
+
+            PROMOTED=$((PROMOTED + 1))
+          done
+
+          echo "Promoted ${PROMOTED} issue(s) from queue"
+        shell: bash
+
+  # Job 6: CI retry — re-trigger developer when CI fails on a Claude-authored PR
   ci-retry:
     runs-on: ubuntu-latest
     if: inputs.ci_retry == 'true'

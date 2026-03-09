@@ -17,9 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial versioning system with v0 release strategy
 - All 5 composite actions: `claude-core`, `claude-respond`, `claude-engineer`, `claude-agent`, `claude-report`
-- 10 agent personalities across 3 action directories:
+- 11 agent personalities across 3 action directories:
   - 7 built-in agents in `claude-core/agents/`: agentic-designer, agentic-developer, architect, docs-reviewer, janitor, performance-reviewer, test-coverage
-  - 2 engineer agents in `claude-engineer/agents/`: code-janitor, docs-engineer
+  - 3 engineer agents in `claude-engineer/agents/`: code-janitor, docs-engineer, security-engineer
   - 1 security agent in `claude-agent/agents/`: security-auditor
 - Prompt composition system with base instructions and composable skills
 - Agent override chain allowing repository-local customization

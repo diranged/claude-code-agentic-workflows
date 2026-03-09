@@ -99,13 +99,13 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
     def test_no_duplicate_issues(self):
         """Test when no duplicate issues are found."""
-        # Create a mock curl script that returns empty array
+        # Create a mock gh script that returns empty array
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_curl_path = Path(tmpdir) / "curl"
-            mock_curl_path.write_text('#!/bin/bash\necho "[]"\n')
-            mock_curl_path.chmod(0o755)
+            mock_gh_path = Path(tmpdir) / "gh"
+            mock_gh_path.write_text('#!/bin/bash\necho "[]"\n')
+            mock_gh_path.chmod(0o755)
 
-            # Override PATH to use our mock curl
+            # Override PATH to use our mock gh
             env = os.environ.copy()
             env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
             env["GITHUB_TOKEN"] = "fake_token"
@@ -126,16 +126,16 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
     def test_duplicate_issue_found(self):
         """Test when a duplicate issue is found."""
-        # Mock curl to return issue array with one issue
+        # Mock gh to return issue array with one issue
         mock_issues = [{"number": 123, "title": "Existing Dashboard"}]
 
-        # Create a mock curl script that returns issue array
+        # Create a mock gh script that returns issue array
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_curl_path = Path(tmpdir) / "curl"
-            mock_curl_path.write_text(f'#!/bin/bash\necho \'{json.dumps(mock_issues)}\'\n')
-            mock_curl_path.chmod(0o755)
+            mock_gh_path = Path(tmpdir) / "gh"
+            mock_gh_path.write_text(f'#!/bin/bash\necho \'{json.dumps(mock_issues)}\'\n')
+            mock_gh_path.chmod(0o755)
 
-            # Override PATH to use our mock curl
+            # Override PATH to use our mock gh
             env = os.environ.copy()
             env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
             env["GITHUB_TOKEN"] = "fake_token"
@@ -156,13 +156,13 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
     def test_api_error_handling(self):
         """Test graceful handling of API errors."""
-        # Create a mock curl script that fails
+        # Create a mock gh script that fails
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_curl_path = Path(tmpdir) / "curl"
-            mock_curl_path.write_text('#!/bin/bash\nexit 1\n')
-            mock_curl_path.chmod(0o755)
+            mock_gh_path = Path(tmpdir) / "gh"
+            mock_gh_path.write_text('#!/bin/bash\nexit 1\n')
+            mock_gh_path.chmod(0o755)
 
-            # Override PATH to use our mock curl
+            # Override PATH to use our mock gh
             env = os.environ.copy()
             env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
             env["GITHUB_TOKEN"] = "fake_token"
@@ -178,7 +178,7 @@ class TestCheckDuplicateIssue(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0)
-            # When curl fails, the script uses fallback "[]" so it should succeed gracefully
+            # When gh fails, the script uses fallback "[]" so it should succeed gracefully
             self.assertIn("duplicate=false", result.stdout)
             self.assertIn("existing_issue_number=", result.stdout)
 
@@ -213,13 +213,13 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
     def test_invalid_json_response(self):
         """Test handling of invalid JSON response."""
-        # Create a mock curl script that returns invalid JSON
+        # Create a mock gh script that returns invalid JSON
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_curl_path = Path(tmpdir) / "curl"
-            mock_curl_path.write_text('#!/bin/bash\necho "invalid json {"\n')
-            mock_curl_path.chmod(0o755)
+            mock_gh_path = Path(tmpdir) / "gh"
+            mock_gh_path.write_text('#!/bin/bash\necho "invalid json {"\n')
+            mock_gh_path.chmod(0o755)
 
-            # Override PATH to use our mock curl
+            # Override PATH to use our mock gh
             env = os.environ.copy()
             env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
             env["GITHUB_TOKEN"] = "fake_token"
@@ -240,19 +240,19 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
     def test_multiple_issues_returns_first(self):
         """Test that when multiple issues exist, the first one is returned."""
-        # Mock curl to return multiple issues
+        # Mock gh to return multiple issues
         mock_issues = [
             {"number": 123, "title": "First Dashboard"},
             {"number": 456, "title": "Second Dashboard"}
         ]
 
-        # Create a mock curl script that returns multiple issues
+        # Create a mock gh script that returns multiple issues
         with tempfile.TemporaryDirectory() as tmpdir:
-            mock_curl_path = Path(tmpdir) / "curl"
-            mock_curl_path.write_text(f'#!/bin/bash\necho \'{json.dumps(mock_issues)}\'\n')
-            mock_curl_path.chmod(0o755)
+            mock_gh_path = Path(tmpdir) / "gh"
+            mock_gh_path.write_text(f'#!/bin/bash\necho \'{json.dumps(mock_issues)}\'\n')
+            mock_gh_path.chmod(0o755)
 
-            # Override PATH to use our mock curl
+            # Override PATH to use our mock gh
             env = os.environ.copy()
             env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
             env["GITHUB_TOKEN"] = "fake_token"
@@ -273,9 +273,44 @@ class TestCheckDuplicateIssue(unittest.TestCase):
 
     def test_label_with_special_characters(self):
         """Test that labels with special characters are handled correctly."""
-        returncode, stdout, stderr = self.run_script(dashboard_label="docs-engineer:dashboard")
-        # Should not crash - specific API behavior depends on GitHub's URL encoding
-        self.assertEqual(returncode, 0)
+        # Test with label containing URL-special characters
+        special_label = "my-label&foo=bar"
+
+        # Create a mock gh script that captures arguments and returns empty array
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args_file = Path(tmpdir) / "gh_args.txt"
+            mock_gh_path = Path(tmpdir) / "gh"
+            mock_gh_script = f'''#!/bin/bash
+# Capture all arguments for verification
+echo "$@" > "{args_file}"
+echo "[]"
+'''
+            mock_gh_path.write_text(mock_gh_script)
+            mock_gh_path.chmod(0o755)
+
+            # Override PATH to use our mock gh
+            env = os.environ.copy()
+            env["PATH"] = f"{tmpdir}:{env.get('PATH', '')}"
+            env["GITHUB_TOKEN"] = "fake_token"
+            env["GITHUB_REPOSITORY"] = "owner/repo"
+            env["DASHBOARD_LABEL"] = special_label
+
+            result = subprocess.run(
+                ["bash", str(self.script_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False
+            )
+
+            # Script should succeed
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("duplicate=false", result.stdout)
+
+            # Verify the special label was passed correctly to gh (not mangled/split)
+            captured_args = args_file.read_text().strip()
+            # The mock gh should receive the label as a single argument (without shell quotes)
+            self.assertIn(f'--label {special_label}', captured_args)
 
 
 if __name__ == "__main__":

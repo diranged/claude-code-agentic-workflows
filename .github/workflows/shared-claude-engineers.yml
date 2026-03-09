@@ -5,9 +5,14 @@ name: "Shared: Claude Engineers"
 #
 # Concurrency control: When max_implementations > 0, the workflow queues excess
 # implementations with a `claude:queued` label. After each implementation run
-# completes, a dequeue job automatically promotes the oldest queued issue(s).
-# Callers should ALSO add a `pull_request: closed` trigger with their own
-# dequeue job to handle PR merges that free up slots (see example below).
+# completes, a dequeue job fires `repository_dispatch` events to promote the
+# oldest queued issue(s). Callers should ALSO add `pull_request: closed` and
+# `repository_dispatch` triggers to handle PR merges and dispatch-driven
+# implementations (see example below).
+#
+# Note: The dequeue uses `repository_dispatch` instead of label changes because
+# GITHUB_TOKEN label changes don't trigger workflow runs. Dispatches are exempt
+# from this limitation.
 #
 # Required caller permissions (must be granted by the calling job):
 #   contents: write, issues: write, pull-requests: write, id-token: write
@@ -18,6 +23,8 @@ name: "Shared: Claude Engineers"
 #       types: [labeled]
 #     pull_request:
 #       types: [closed]
+#     repository_dispatch:
+#       types: [claude-dequeue]
 #     workflow_run:
 #       workflows: ["Tests"]
 #       types: [completed]
@@ -36,6 +43,23 @@ name: "Shared: Claude Engineers"
 #       uses: diranged/claude-code-agentic-workflows/.github/workflows/shared-claude-engineers.yml@v0
 #       with:
 #         runner: my-self-hosted-runner
+#       secrets:
+#         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+#
+#     dequeue-implement:
+#       if: >-
+#         github.event_name == 'repository_dispatch'
+#         && github.event.action == 'claude-dequeue'
+#       permissions:
+#         contents: write
+#         issues: write
+#         pull-requests: write
+#         id-token: write
+#       uses: diranged/claude-code-agentic-workflows/.github/workflows/shared-claude-engineers.yml@v0
+#       with:
+#         runner: my-self-hosted-runner
+#         issue_number: ${{ github.event.client_payload.issue_number }}
+#         label_name: "${{ github.event.client_payload.label_prefix }}:implement"
 #       secrets:
 #         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
 #
@@ -102,6 +126,16 @@ on:
         description: "Model for unknown labels matching the prefix"
         type: string
         default: "claude-opus-4-20250514"
+
+      # Dispatch-triggered invocation (used by dequeue mechanism)
+      issue_number:
+        description: "Issue number (overrides event context, used for dispatch-triggered runs)"
+        type: string
+        default: ""
+      label_name:
+        description: "Label name for agent routing (overrides event context, used for dispatch-triggered runs)"
+        type: string
+        default: ""
 
       # Concurrency control
       max_implementations:
@@ -228,10 +262,10 @@ jobs:
       - name: Route label to agent
         id: route
         env:
-          LABEL: ${{ github.event.label.name }}
+          LABEL: ${{ inputs.label_name || github.event.label.name }}
           LABEL_PREFIX: ${{ inputs.label_prefix }}
         run: |
-          echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          echo "issue_number=${{ inputs.issue_number || github.event.issue.number }}" >> "$GITHUB_OUTPUT"
 
           suffix="${LABEL#"${LABEL_PREFIX}:"}"
           case "$suffix" in
@@ -409,15 +443,20 @@ jobs:
             - Label prefix: ${{ inputs.label_prefix }}
 
   # Job 5: Dequeue — promote next queued issue(s) when a slot opens
+  #
+  # Uses repository_dispatch to trigger implementation runs because GITHUB_TOKEN
+  # label changes don't trigger workflow runs. Dispatches are exempt from this
+  # limitation (per GitHub docs).
   dequeue:
     runs-on: ubuntu-latest
     needs: [claude-run]
     if: always() && inputs.ci_retry != 'true' && inputs.max_implementations != '0'
     permissions:
+      contents: write
       issues: write
       pull-requests: read
     steps:
-      - name: Promote queued issues
+      - name: Promote queued issues via dispatch
         env:
           GH_TOKEN: ${{ github.token }}
           MAX_IMPL: ${{ inputs.max_implementations }}
@@ -469,10 +508,18 @@ jobs:
             fi
 
             echo "Promoting issue #${ISSUE_NUM} from queue"
+
+            # Swap labels for tracking (concurrency gate counts implement labels)
             gh issue edit "$ISSUE_NUM" \
               --repo "${{ github.repository }}" \
               --remove-label "${LABEL_PREFIX}:queued" \
               --add-label "${LABEL_PREFIX}:implement"
+
+            # Fire repository_dispatch to trigger the implementation run.
+            # Label changes via GITHUB_TOKEN don't trigger workflows, but
+            # repository_dispatch events do.
+            echo "{\"event_type\":\"claude-dequeue\",\"client_payload\":{\"issue_number\":\"${ISSUE_NUM}\",\"label_prefix\":\"${LABEL_PREFIX}\"}}" | \
+              gh api "repos/${{ github.repository }}/dispatches" --method POST --input -
 
             gh issue comment "$ISSUE_NUM" \
               --repo "${{ github.repository }}" \

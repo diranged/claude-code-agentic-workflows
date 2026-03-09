@@ -5,6 +5,8 @@ on:
     types: [labeled]
   pull_request:
     types: [closed]
+  repository_dispatch:
+    types: [claude-dequeue]
   workflow_run:
     workflows: ["Tests", "Conventional Commit Check"]
     types: [completed]
@@ -26,17 +28,34 @@ jobs:
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
 
-  # Dequeue: when a PR is closed/merged, promote queued issues if slots are available
+  # Dequeue-implement: run implementation for a dispatch-promoted issue
+  dequeue-implement:
+    if: >-
+      github.event_name == 'repository_dispatch'
+      && github.event.action == 'claude-dequeue'
+    uses: ./.github/workflows/shared-claude-engineers.yml
+    with:
+      runner: diranged-claude-code
+      notify_owners: "diranged"
+      max_implementations: "2"
+      allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"
+      issue_number: "${{ github.event.client_payload.issue_number }}"
+      label_name: "${{ github.event.client_payload.label_prefix }}:implement"
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+
+  # Dequeue: when a PR is closed/merged, check for queued issues and fire dispatches
   dequeue:
     if: >-
       github.event_name == 'pull_request'
       && github.event.action == 'closed'
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       issues: write
       pull-requests: read
     steps:
-      - name: Promote queued issues
+      - name: Promote queued issues via dispatch
         env:
           GH_TOKEN: ${{ github.token }}
           MAX_IMPL: "2"
@@ -88,10 +107,16 @@ jobs:
             fi
 
             echo "Promoting issue #${ISSUE_NUM} from queue"
+
+            # Swap labels for tracking
             gh issue edit "$ISSUE_NUM" \
               --repo "${{ github.repository }}" \
               --remove-label "${LABEL_PREFIX}:queued" \
               --add-label "${LABEL_PREFIX}:implement"
+
+            # Fire repository_dispatch to trigger implementation
+            echo "{\"event_type\":\"claude-dequeue\",\"client_payload\":{\"issue_number\":\"${ISSUE_NUM}\",\"label_prefix\":\"${LABEL_PREFIX}\"}}" | \
+              gh api "repos/${{ github.repository }}/dispatches" --method POST --input -
 
             gh issue comment "$ISSUE_NUM" \
               --repo "${{ github.repository }}" \

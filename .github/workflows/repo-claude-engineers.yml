@@ -3,8 +3,6 @@ name: "Claude Engineers"
 on:
   issues:
     types: [labeled]
-  pull_request:
-    types: [closed]
   workflow_run:
     workflows: ["Tests", "Conventional Commit Check"]
     types: [completed]
@@ -21,87 +19,9 @@ jobs:
     with:
       runner: diranged-claude-code
       notify_owners: "diranged"
-      max_implementations: "2"
       allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-
-  # Dequeue: when a PR is closed/merged, promote queued issues if slots are available
-  dequeue:
-    if: >-
-      github.event_name == 'pull_request'
-      && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: read
-    steps:
-      - name: Promote queued issues
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MAX_IMPL: "2"
-          LABEL_PREFIX: "claude"
-        run: |
-          set -euo pipefail
-
-          # Count current implementations
-          IMPL_ISSUES=$(gh issue list \
-            --repo "${{ github.repository }}" \
-            --label "${LABEL_PREFIX}:implement" \
-            --state open \
-            --json number \
-            --jq 'length')
-
-          CLAUDE_PRS=$(gh pr list \
-            --repo "${{ github.repository }}" \
-            --state open \
-            --json number,author \
-            --jq '[.[] | select(.author.login | test("claude|\\[bot\\]"))] | length')
-
-          TOTAL=$((IMPL_ISSUES + CLAUDE_PRS))
-          echo "Current slots: ${TOTAL}/${MAX_IMPL}"
-
-          if [ "$TOTAL" -ge "$MAX_IMPL" ]; then
-            echo "No slots available, skipping dequeue"
-            exit 0
-          fi
-
-          SLOTS_AVAILABLE=$((MAX_IMPL - TOTAL))
-
-          # Find oldest queued issues, promote up to available slots
-          QUEUED=$(gh issue list \
-            --repo "${{ github.repository }}" \
-            --label "${LABEL_PREFIX}:queued" \
-            --state open \
-            --json number,createdAt \
-            --jq 'sort_by(.createdAt) | .[].number')
-
-          if [ -z "$QUEUED" ]; then
-            echo "No queued issues to promote"
-            exit 0
-          fi
-
-          PROMOTED=0
-          for ISSUE_NUM in $QUEUED; do
-            if [ "$PROMOTED" -ge "$SLOTS_AVAILABLE" ]; then
-              break
-            fi
-
-            echo "Promoting issue #${ISSUE_NUM} from queue"
-            gh issue edit "$ISSUE_NUM" \
-              --repo "${{ github.repository }}" \
-              --remove-label "${LABEL_PREFIX}:queued" \
-              --add-label "${LABEL_PREFIX}:implement"
-
-            gh issue comment "$ISSUE_NUM" \
-              --repo "${{ github.repository }}" \
-              --body "Slot available — promoting from queue to implementation."
-
-            PROMOTED=$((PROMOTED + 1))
-          done
-
-          echo "Promoted ${PROMOTED} issue(s) from queue"
-        shell: bash
 
   # CI retry: re-trigger developer when CI fails on a Claude-authored PR
   ci-retry:

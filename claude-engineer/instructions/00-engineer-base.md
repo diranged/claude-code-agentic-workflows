@@ -169,11 +169,52 @@ By the time you create an issue, Phase 3 has already confirmed the finding is ne
 
 1. **Create a focused issue** with a clear title and description including file paths and line references where relevant.
 
-2. **Delegate to the design pipeline** by adding the delegation label and the `claude:auto_advance` label:
+2. **Delegate to the design pipeline** by adding the delegation label only:
    ```bash
-   gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "<delegation_label>" --add-label "claude:auto_advance"
+   gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "<delegation_label>"
    ```
-   The `claude:auto_advance` label tells the pipeline to proceed through design → review → implement without waiting for human approval at each stage. Issues created by engineer agents are trusted to run autonomously.
+   This triggers the design agent to create an implementation plan. The issue will **not** auto-advance to implementation yet — that happens in Phase 4 based on capacity.
+
+**Do NOT add `claude:auto_advance` when creating issues.** Capacity management (Phase 4) controls when issues are promoted to implementation.
+
+### Phase 4: Capacity Management
+
+After reconciliation and issue creation, decide which designed issues should be promoted to implementation.
+
+1. **Check the `Max implementations` value** from the Task Context. If `0`, skip this phase (unlimited — all issues auto-advance immediately on creation, so add `claude:auto_advance` to new issues in step 2 of Creating Work Items above).
+
+2. **Count in-flight implementations:**
+   ```bash
+   # Issues currently being implemented
+   IMPL_COUNT=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "claude:implement" --state open --json number --jq 'length')
+   # Open PRs from Claude (implementations producing PRs)
+   PR_COUNT=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,author --jq '[.[] | select(.author.login | test("claude|\\[bot\\]"))] | length')
+   TOTAL=$((IMPL_COUNT + PR_COUNT))
+   ```
+
+3. **Find designed issues ready for promotion.** These are issues with your task label that have received a design (look for a tracking comment from the design agent) but do NOT have `claude:auto_advance`:
+   ```bash
+   gh issue list --repo "$GITHUB_REPOSITORY" --label "<task_label>" --state open --json number,title,labels
+   ```
+   Filter to issues that have the delegation label but NOT `claude:auto_advance`.
+
+4. **Promote issues up to available capacity.** For each issue to promote (oldest first), add `claude:auto_advance` and `claude:implement` to trigger implementation:
+   ```bash
+   gh issue edit <NUMBER> --repo "$GITHUB_REPOSITORY" --add-label "claude:auto_advance" --add-label "claude:implement"
+   ```
+
+5. **Log promotions on the dashboard** so you can track what was promoted and when.
+
+### Capacity Management Examples
+
+**Max implementations = 2, currently 1 in flight, 3 designed issues waiting:**
+> Promote 1 issue (the oldest). After this run, 2 implementations will be in flight (at the limit). The other 2 designed issues wait for the next run.
+
+**Max implementations = 2, currently 0 in flight, 3 designed issues waiting:**
+> Promote 2 issues. The third waits for the next run.
+
+**Max implementations = 0 (unlimited):**
+> Skip capacity management entirely. Add `claude:auto_advance` to issues at creation time.
 
 ## Constraints
 

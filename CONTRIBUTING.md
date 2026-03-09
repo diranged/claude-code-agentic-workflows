@@ -109,7 +109,7 @@ Scope is optional unless the change affects multiple areas.
 Agents are defined as Markdown files containing prompts and instructions:
 
 - `claude-core/agents/` — 7 general-purpose agents
-- `claude-engineer/agents/` — 2 engineer-specific agents
+- `claude-engineer/agents/` — 3 engineer-specific agents
 - `claude-agent/agents/` — 1 security-focused agent
 
 ### Custom Agents

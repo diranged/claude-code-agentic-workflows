@@ -407,6 +407,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: read
+      contents: read
     steps:
       - name: Check Claude PR and retry
         env:

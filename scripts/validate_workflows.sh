@@ -24,7 +24,26 @@
 set -euo pipefail
 
 WORKFLOWS_DIR="${1:-.github/workflows}"
+if [[ "$WORKFLOWS_DIR" == *..* ]]; then
+    echo "Error: WORKFLOWS_DIR cannot contain '..' (got: $WORKFLOWS_DIR)" >&2
+    exit 1
+fi
+
 PYTHON="${PYTHON:-python3}"
+
+# Validate PYTHON is a real executable that looks like python3
+resolved=$(command -v "$PYTHON" 2>/dev/null) || {
+    echo "Error: PYTHON='$PYTHON' is not a valid executable" >&2
+    exit 1
+}
+case "$resolved" in
+    *python3*) ;;
+    *)
+        echo "Error: PYTHON='$PYTHON' does not resolve to a python3 executable (got: $resolved)" >&2
+        exit 1
+        ;;
+esac
+PYTHON="$resolved"
 FAILED=0
 FOUND=0
 

@@ -95,6 +95,14 @@ on:
         type: string
         default: "claude-opus-4-20250514"
 
+      # Deprecated — kept for backwards compatibility with existing callers.
+      # Concurrency is now managed by engineer agents via capacity management
+      # (see claude-engineer/instructions/00-engineer-base.md Phase 4).
+      max_implementations:
+        description: "DEPRECATED: No longer used. Concurrency is managed by engineer agents."
+        type: string
+        default: "0"
+
       # CI retry configuration
       ci_retry:
         description: "Enable CI retry mode (set to 'true' when called from workflow_run)"

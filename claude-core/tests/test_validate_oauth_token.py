@@ -5,7 +5,6 @@ import base64
 import json
 import os
 import subprocess
-import tempfile
 import time
 import unittest
 from pathlib import Path

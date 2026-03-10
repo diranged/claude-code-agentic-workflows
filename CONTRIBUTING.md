@@ -170,9 +170,9 @@ When creating a new release:
 #### 2. Update Internal Action References
 Update these 4 files to reference the new version tag:
 
-- `claude-respond/action.yml:120` — `claude-core@v0.x.y`
-- `claude-respond/action.yml:151` — `claude-report@v0.x.y`
-- `claude-engineer/action.yml:78` — `claude-respond@v0.x.y`
+- `claude-respond/action.yml:124` — `claude-core@v0.x.y`
+- `claude-respond/action.yml:156` — `claude-report@v0.x.y`
+- `claude-engineer/action.yml:82` — `claude-respond@v0.x.y`
 - `claude-agent/action.yml:82` — `claude-respond@v0.x.y`
 
 #### 3. Update Documentation References
@@ -204,9 +204,9 @@ uses: diranged/claude-code-agentic-workflows/claude-respond@v0
 ```
 
 ### Post-Release
-After releasing, update internal references back to `@v0` for development:
-- Revert the 4 internal action.yml references from `@v0.x.y` back to `@v0`
-- This allows development branches to use the latest stable versions
+After releasing, update internal references back to `@main` for development:
+- Revert the 4 internal action.yml references from `@v0.x.y` back to `@main`
+- This allows development branches to use the current development code
 
 ## Getting Help
 

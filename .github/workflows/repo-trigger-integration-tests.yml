@@ -20,9 +20,18 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.INTEGRATION_APP_ID }}
+          private-key: ${{ secrets.INTEGRATION_APP_KEY }}
+          owner: diranged
+          repositories: claude-workflows-integration-tests
+
       - name: Trigger integration tests in test repo
         env:
-          GH_TOKEN: ${{ secrets.INTEGRATION_TEST_PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh api repos/diranged/claude-workflows-integration-tests/dispatches \
             -f event_type=run-integration-tests \

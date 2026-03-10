@@ -22,6 +22,12 @@ inputs:
     description: "GitHub App private key (PEM format)."
     required: false
 
+  # Trigger configuration
+  allowed_bots:
+    description: "Comma-separated list of allowed bot usernames, or '*' to allow all bots."
+    required: false
+    default: ""
+
   # Engineer configuration
   agent_name:
     description: "Agent to load from agents/ directory (e.g., 'docs-engineer')."
@@ -94,6 +100,7 @@ runs:
         max_turns: ${{ inputs.max_turns }}
         timeout_minutes: ${{ inputs.timeout_minutes }}
         allowed_tools: ${{ inputs.allowed_tools }}
+        allowed_bots: ${{ inputs.allowed_bots }}
         prompt: |
           Dashboard Configuration:
           - Dashboard label: ${{ inputs.dashboard_label }}

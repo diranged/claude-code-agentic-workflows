@@ -1,3 +1,1 @@
-.PHONY: test
-test:
-	python3 -m unittest discover tests/ -v
+include ../Makefile.common

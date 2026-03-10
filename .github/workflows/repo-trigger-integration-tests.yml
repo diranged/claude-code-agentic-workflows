@@ -1,0 +1,32 @@
+name: "Trigger Integration Tests"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/shared-*.yml"
+      - "claude-core/**"
+      - "claude-respond/**"
+      - "claude-engineer/**"
+      - "claude-agent/**"
+      - "claude-report/**"
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: "Tests to run (comma-separated or 'all')"
+        default: "all"
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger integration tests in test repo
+        env:
+          GH_TOKEN: ${{ secrets.INTEGRATION_TEST_PAT }}
+        run: |
+          gh api repos/diranged/claude-workflows-integration-tests/dispatches \
+            -f event_type=run-integration-tests \
+            -f "client_payload[tests]=${{ inputs.tests || 'all' }}" \
+            -f "client_payload[source_repo]=${{ github.repository }}" \
+            -f "client_payload[source_sha]=${{ github.sha }}" \
+            -f "client_payload[source_ref]=${{ github.ref_name }}"

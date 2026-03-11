@@ -152,14 +152,35 @@ class TestBuildClaudeArgs(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("ERROR: MODEL contains disallowed characters", stderr)
 
-    def test_extra_args_not_validated(self):
-        """EXTRA_ARGS with special characters should still be accepted."""
-        rc, _, _, outputs = run_script(
+    def test_extra_args_with_metacharacters_rejected(self):
+        """EXTRA_ARGS containing semicolon should be rejected."""
+        rc, _, stderr, _ = run_script(
             "build_claude_args.sh",
             {"EXTRA_ARGS": "--timeout 60; echo test"},
         )
+        self.assertEqual(rc, 1)
+        self.assertIn("ERROR: EXTRA_ARGS contains disallowed characters", stderr)
+
+    def test_extra_args_with_safe_characters_accepted(self):
+        """EXTRA_ARGS with safe characters should pass validation."""
+        rc, _, _, outputs = run_script(
+            "build_claude_args.sh",
+            {"EXTRA_ARGS": "--timeout 60 --flag-name value_123"},
+        )
         self.assertEqual(rc, 0)
-        self.assertIn("--timeout 60; echo test", outputs["args"])
+        self.assertIn("--timeout 60 --flag-name value_123", outputs["args"])
+
+    def test_all_metacharacters_rejected_in_extra_args(self):
+        """Test that all dangerous metacharacters are rejected in EXTRA_ARGS."""
+        dangerous_chars = [";", "|", "&", "$", "`", "<", ">"]
+        for char in dangerous_chars:
+            with self.subTest(char=char):
+                rc, _, stderr, _ = run_script(
+                    "build_claude_args.sh",
+                    {"EXTRA_ARGS": f"--flag{char}evil"},
+                )
+                self.assertEqual(rc, 1)
+                self.assertIn("ERROR: EXTRA_ARGS contains disallowed characters", stderr)
 
     def test_valid_model_with_special_but_safe_chars(self):
         """MODEL with hyphens, underscores, dots should pass validation."""

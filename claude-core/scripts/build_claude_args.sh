@@ -60,6 +60,7 @@ fi
 
 # Append any additional raw claude_args
 if [ -n "${EXTRA_ARGS:-}" ]; then
+  validate_arg "EXTRA_ARGS" "$EXTRA_ARGS"
   ARGS="$ARGS $EXTRA_ARGS"
 fi
 

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `claude:auto_advance` label for automatic pipeline progression through design → review → implement stages
+- Integration test infrastructure with `repo-trigger-integration-tests.yml` workflow and companion test repository (`diranged/claude-workflows-integration-tests`) supporting 4 automated test scenarios
 
 ## [0.1.0] - 2026-03-05
 

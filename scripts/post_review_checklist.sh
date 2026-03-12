@@ -37,7 +37,20 @@ DEFAULT_CHECKLIST="## Review Checklist
 # Get checklist content from file or use default
 CHECKLIST_FILE="${CHECKLIST_FILE:-.github/review-checklist.md}"
 
-if [[ -f "$CHECKLIST_FILE" ]]; then
+# Path traversal guard: validate file is within workspace
+resolved_path=$(realpath "$CHECKLIST_FILE" 2>/dev/null || echo "")
+workspace_root=$(realpath "${GITHUB_WORKSPACE:-.}" 2>/dev/null || realpath "." 2>/dev/null)
+
+# Security check: ensure file is within workspace
+if [[ -n "$resolved_path" && "$resolved_path" == "$workspace_root"/* ]] && [[ -f "$resolved_path" ]]; then
+    echo "Using custom checklist from $CHECKLIST_FILE"
+    checklist_content=$(cat "$resolved_path")
+elif [[ -n "$resolved_path" && "$resolved_path" != "$workspace_root"/* ]]; then
+    echo "Error: Checklist file must be within the workspace directory" >&2
+    echo "Using default checklist for security" >&2
+    checklist_content="$DEFAULT_CHECKLIST"
+elif [[ -f "$CHECKLIST_FILE" ]]; then
+    # realpath failed but file exists - fall back to direct read for simple relative paths
     echo "Using custom checklist from $CHECKLIST_FILE"
     checklist_content=$(cat "$CHECKLIST_FILE")
 else
@@ -54,6 +67,12 @@ if [[ -n "$existing_comment" ]]; then
     echo "Review checklist comment already exists (comment ID: $existing_comment)"
     echo "Skipping to avoid duplicates"
     exit 0
+fi
+
+# Content validation: check size limit
+if [[ ${#checklist_content} -gt 65536 ]]; then
+    echo "Error: Checklist content exceeds maximum size (64KB)" >&2
+    exit 1
 fi
 
 # Post the checklist comment

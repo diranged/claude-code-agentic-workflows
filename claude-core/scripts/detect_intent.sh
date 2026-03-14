@@ -27,6 +27,11 @@ elif [[ "$label" == "claude:design" ]]; then
   echo "agent=${agent}" >> "$GITHUB_OUTPUT"
   echo "model=${model}" >> "$GITHUB_OUTPUT"
   exit 0
+elif [[ "$label" == "claude:auto_advance" ]] || [[ "$label" == "claude:queued" ]]; then
+  # Modifier labels — not pipeline stages, skip execution
+  echo "skip=true" >> "$GITHUB_OUTPUT"
+  echo "Skipping execution for modifier label: $label" >&2
+  exit 0
 elif [[ "$label" == claude:* ]]; then
   # Unknown claude: label — default to designer
   agent="agentic-designer"

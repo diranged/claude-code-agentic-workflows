@@ -34,6 +34,20 @@ class TestDetectIntent(unittest.TestCase):
         self.assertEqual(outputs["agent"], "agentic-designer")
         self.assertEqual(outputs["model"], "claude-opus-4-20250514")
 
+    def test_label_modifier_auto_advance(self):
+        """Modifier labels should skip execution."""
+        outputs = self._run(trigger_label="claude:auto_advance")
+        self.assertEqual(outputs["skip"], "true")
+        self.assertNotIn("agent", outputs)
+        self.assertNotIn("model", outputs)
+
+    def test_label_modifier_queued(self):
+        """Modifier labels should skip execution."""
+        outputs = self._run(trigger_label="claude:queued")
+        self.assertEqual(outputs["skip"], "true")
+        self.assertNotIn("agent", outputs)
+        self.assertNotIn("model", outputs)
+
     def test_label_unknown_claude_prefix(self):
         outputs = self._run(trigger_label="claude:something-else")
         self.assertEqual(outputs["agent"], "agentic-designer")

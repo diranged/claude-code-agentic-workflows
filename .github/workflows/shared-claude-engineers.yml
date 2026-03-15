@@ -28,9 +28,10 @@ name: "Shared: Claude Engineers"
 #       uses: diranged/claude-code-agentic-workflows/.github/workflows/shared-claude-engineers.yml@v0
 #       with:
 #         runner: my-self-hosted-runner
+#         pre_run: "GITHUB_TOKEN=${PRE_RUN_SECRET} npm ci"  # optional: run before Claude starts
 #       secrets:
 #         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-#         custom_github_token: ${{ secrets.GH_PACKAGES_TOKEN }}  # optional: token for npm/packages auth
+#         pre_run_secret: ${{ secrets.GH_PACKAGES_TOKEN }}  # optional: exposed as PRE_RUN_SECRET
 #
 #     ci-retry:
 #       if: >-
@@ -48,7 +49,6 @@ name: "Shared: Claude Engineers"
 #         ci_retry_max: "3"
 #       secrets:
 #         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-#         custom_github_token: ${{ secrets.GH_PACKAGES_TOKEN }}  # optional: token for npm/packages auth
 
 on:
   workflow_call:
@@ -189,6 +189,12 @@ on:
         type: string
         default: "rocket"
 
+      # Pre-run setup
+      pre_run:
+        description: "Shell commands to run after checkout but before Claude (e.g., install dependencies)"
+        type: string
+        default: ""
+
     secrets:
       claude_code_oauth_token:
         description: "Claude Code OAuth token (subscription billing)"
@@ -196,14 +202,14 @@ on:
       anthropic_api_key:
         description: "Anthropic API key (per-token billing)"
         required: false
-      custom_github_token:
-        description: "GitHub token for git/API/npm operations (overrides default GITHUB_TOKEN)"
-        required: false
       app_id:
         description: "GitHub App ID for elevated permissions"
         required: false
       app_private_key:
         description: "GitHub App private key (PEM format)"
+        required: false
+      pre_run_secret:
+        description: "Secret value exposed as PRE_RUN_SECRET env var during pre_run commands"
         required: false
 
 jobs:
@@ -289,12 +295,18 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Pre-run setup
+        if: inputs.pre_run != ''
+        run: ${{ inputs.pre_run }}
+        env:
+          PRE_RUN_SECRET: ${{ secrets.pre_run_secret }}
+        shell: bash
+
       - name: Run Claude
         uses: diranged/claude-code-agentic-workflows/claude-respond@main
         with:
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
-          github_token: ${{ secrets.custom_github_token }}
           app_id: ${{ secrets.app_id }}
           app_private_key: ${{ secrets.app_private_key }}
           trigger_phrase: ${{ inputs.trigger_phrase }}

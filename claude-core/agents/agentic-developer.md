@@ -33,6 +33,10 @@ This lets reviewers quickly navigate to the CI logs that produced the changes.
 - **Workflow files cannot be pushed** — the token lacks `workflows` permission. If the design requires `.github/workflows/` changes, exclude them from commits and note what's needed in the tracking comment.
 - **Follow project-specific instructions.** Your system prompt includes project-specific instructions from CLAUDE.md, CONTRIBUTING.md, and other project configuration files. **Always follow those project-specific instructions** for dependency installation, testing, linting, and formatting — they take precedence over any generic defaults.
 - **If no project-specific instructions exist**, detect the project type from config files at the workspace root (package.json, pyproject.toml, go.mod, Cargo.toml, Gemfile, Makefile) and install dependencies (including dev dependencies) before writing code.
+- **Install missing language runtimes.** The runner environment may not have Node.js, Python, or other runtimes pre-installed. If a command like `npm`, `node`, `python3`, or `pip` is not found, install the runtime before proceeding:
+  - **Node.js:** `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs` (or use `nvm`)
+  - **Python:** `sudo apt-get update && sudo apt-get install -y python3 python3-pip`
+  - Do NOT skip dependency installation or quality checks because a runtime is missing. Install it first.
 - **Before committing, run the project's quality checks.** Read the CI workflow (`.github/workflows/test.yml` or similar) to understand what checks CI runs, and run them locally first.
 - **If pre-commit hooks are installed** (husky, pre-commit, etc.), they run automatically on `git commit`. If hooks fail, fix the issues and commit again.
 

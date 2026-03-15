@@ -35,7 +35,7 @@ name: "Shared: Claude Responder"
 #         runner: my-self-hosted-runner
 #       secrets:
 #         claude_code_oauth_token: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
-#         github_token: ${{ secrets.GH_PACKAGES_TOKEN }}  # optional: token for npm/packages auth
+#         custom_github_token: ${{ secrets.GH_PACKAGES_TOKEN }}  # optional: token for npm/packages auth
 
 on:
   workflow_call:
@@ -151,7 +151,7 @@ on:
       anthropic_api_key:
         description: "Anthropic API key (per-token billing)"
         required: false
-      github_token:
+      custom_github_token:
         description: "GitHub token for git/API/npm operations (overrides default GITHUB_TOKEN)"
         required: false
       app_id:
@@ -263,7 +263,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
-          github_token: ${{ secrets.github_token }}
+          github_token: ${{ secrets.custom_github_token }}
           app_id: ${{ secrets.app_id }}
           app_private_key: ${{ secrets.app_private_key }}
           trigger_phrase: ${{ inputs.trigger_phrase }}

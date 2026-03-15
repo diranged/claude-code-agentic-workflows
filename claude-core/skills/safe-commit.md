@@ -17,14 +17,20 @@ Note every command CI runs (formatters, linters, type checkers, tests).
 
 ### Step 2: Install runtime and dependencies
 
-If the required runtime (node, python3, etc.) is not installed, install it first:
+If the required runtime (node, python3, etc.) is not installed, install it first. Try these approaches in order:
 
 ```bash
-# If `node` or `npm` is not found:
+# If `node` or `npm` is not found, try these in order:
+# 1. Check for node in non-standard paths
+find /usr /home /opt -name "node" -type f 2>/dev/null | head -5
+
+# 2. Install via package manager
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
 
-# If `python3` is not found:
-sudo apt-get update && sudo apt-get install -y python3 python3-pip
+# 3. If sudo is unavailable, try nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+nvm install 22
 ```
 
 Then install project dependencies:
@@ -34,7 +40,15 @@ npm ci          # Node.js projects
 pip install -r requirements.txt  # Python projects
 ```
 
-**Do NOT skip this step.** If the runtime is missing, install it — do not proceed without it.
+### CRITICAL: Fail if environment setup fails
+
+**If you cannot install the required runtime or dependencies after exhausting all options above, you MUST stop immediately.** Do NOT proceed to write code, do NOT commit, do NOT create a PR.
+
+Instead:
+1. Update the tracking comment with status **Failed** and explain exactly what is missing (e.g., "Node.js is not installed and cannot be installed on this runner").
+2. Exit with an error. Run: `exit 1`
+
+**Never work around a missing environment by skipping quality checks.** Committing code without running the formatter and linter wastes CI cycles and creates broken PRs. It is better to fail loudly than to silently produce unverified code.
 
 ### Step 3: Write your code changes
 
@@ -75,8 +89,8 @@ git push -u origin <branch>
 git log origin/<branch> --oneline -1   # Verify push succeeded
 ```
 
-## Critical Rule
+## Critical Rules
 
-**The sequence is: code → format → lint → test → stage → commit → push.**
+1. **The sequence is: code → format → lint → test → stage → commit → push.** Never reorder these steps. Never skip the format/lint/test steps.
 
-Never reorder these steps. Never skip the format/lint/test steps. If you find yourself about to run `git commit` and you have not yet run the formatter, STOP and run it first.
+2. **If you cannot run the quality checks, do not commit.** A commit without verification is worse than no commit at all. Fail with a clear error message explaining what is missing.

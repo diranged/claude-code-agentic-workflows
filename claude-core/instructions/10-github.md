@@ -50,6 +50,6 @@ When you are blocked and need human input (ambiguous requirements, conflicting c
 
 - **Use targeted searches.** Never glob the entire repository (`**/*`). Instead, use specific patterns like `.github/workflows/*.yml` or `tests/**/*.py`.
 - **Don't explore action internals.** Files in `claude-core/scripts/`, `claude-core/action.yml`, and `claude-respond/` are internal plumbing — do not read them unless the issue specifically requires modifying them.
-- **Check dependencies before coding.** Before writing code that requires external packages, verify they are available (`python3 -c "import yaml"`, `which jq`, etc.). Prefer solutions with zero external dependencies when possible.
+- **Follow project setup instructions.** Your system prompt includes CLAUDE.md and other project configuration files. Use those to set up the development environment (install dependencies, configure tools) before writing code. If no project-specific instructions exist, detect the project type and install dependencies appropriately.
 - **Minimize tool calls.** Batch parallel reads when examining multiple files. Don't re-read files you've already seen.
 - **Do not use TodoWrite excessively.** Track progress in the tracking comment instead. At most 2 TodoWrite calls per session.

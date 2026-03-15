@@ -30,8 +30,10 @@ This lets reviewers quickly navigate to the CI logs that produced the changes.
 
 - See the GitHub Environment instructions for API access details (gh CLI or curl fallback).
 - **Workflow files cannot be pushed** — the token lacks `workflows` permission. If the design requires `.github/workflows/` changes, exclude them from commits and note what's needed in the tracking comment.
-- Before writing code that requires external packages, verify they are available. Use `make test` which manages its own virtualenvs.
-- `make` may not be installed. If `make test` fails, run tests directly: `cd <dir> && python3 -m venv .venv && .venv/bin/pip install -r ../requirements-test.txt && .venv/bin/python3 -m unittest discover . -v`
+- **Follow project-specific instructions.** Your system prompt includes project-specific instructions from CLAUDE.md, CONTRIBUTING.md, and other project configuration files. **Always follow those project-specific instructions** for dependency installation, testing, linting, and formatting — they take precedence over any generic defaults.
+- **If no project-specific instructions exist**, detect the project type from config files at the workspace root (package.json, pyproject.toml, go.mod, Cargo.toml, Gemfile, Makefile) and install dependencies (including dev dependencies) before writing code.
+- **Before committing, run the project's quality checks.** Read the CI workflow (`.github/workflows/test.yml` or similar) to understand what checks CI runs, and run them locally first.
+- **If pre-commit hooks are installed** (husky, pre-commit, etc.), they run automatically on `git commit`. If hooks fail, fix the issues and commit again.
 
 ## Rules
 

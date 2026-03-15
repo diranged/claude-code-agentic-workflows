@@ -572,11 +572,15 @@ class TestComposePrompt(unittest.TestCase):
         rc, _, _, outputs = self._run({"AGENT_NAME": "agentic-developer"})
         self.assertEqual(rc, 0)
         prompt = outputs.get("prompt", "")
-        # Workflow should include project environment setup step
+        # Workflow should include mandatory project environment setup step
         self.assertIn("Set up the project environment", prompt)
-        self.assertIn("read the CI workflow", prompt)
-        # Workflow should include running ALL CI checks before committing
-        self.assertIn("Run ALL CI checks locally before committing", prompt)
+        self.assertIn("MANDATORY", prompt)
+        self.assertIn(".github/workflows/test.yml", prompt)
+        # Workflow should include formatting/linting before committing
+        self.assertIn("Format, lint, and test before committing", prompt)
+        self.assertIn("npx prettier --write", prompt)
+        # Rules should enforce formatting
+        self.assertIn("NEVER skip formatting or linting", prompt)
         # Old prescriptive make test step should be gone
         self.assertNotIn("execute the project's test suite (`make test`)", prompt)
 

@@ -15,12 +15,26 @@ cat package.json                 # look for "scripts" section
 
 Note every command CI runs (formatters, linters, type checkers, tests).
 
-### Step 2: Install dependencies
+### Step 2: Install runtime and dependencies
+
+If the required runtime (node, python3, etc.) is not installed, install it first:
+
+```bash
+# If `node` or `npm` is not found:
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
+
+# If `python3` is not found:
+sudo apt-get update && sudo apt-get install -y python3 python3-pip
+```
+
+Then install project dependencies:
 
 ```bash
 npm ci          # Node.js projects
 pip install -r requirements.txt  # Python projects
 ```
+
+**Do NOT skip this step.** If the runtime is missing, install it — do not proceed without it.
 
 ### Step 3: Write your code changes
 

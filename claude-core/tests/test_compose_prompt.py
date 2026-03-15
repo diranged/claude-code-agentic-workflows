@@ -567,6 +567,19 @@ class TestComposePrompt(unittest.TestCase):
         self.assertNotIn("Use `make test` which manages its own virtualenvs", prompt)
         self.assertNotIn("python3 -m venv .venv && .venv/bin/pip install -r ../requirements-test.txt", prompt)
 
+    def test_agentic_developer_workflow_includes_setup_and_ci_checks(self):
+        """agentic-developer workflow should include project setup and CI check steps."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "agentic-developer"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # Workflow should include project environment setup step
+        self.assertIn("Set up the project environment", prompt)
+        self.assertIn("read the CI workflow", prompt)
+        # Workflow should include running ALL CI checks before committing
+        self.assertIn("Run ALL CI checks locally before committing", prompt)
+        # Old prescriptive make test step should be gone
+        self.assertNotIn("execute the project's test suite (`make test`)", prompt)
+
     def test_base_instructions_defer_to_project_setup(self):
         """Base instructions should instruct to follow project setup instructions."""
         rc, _, _, outputs = self._run()

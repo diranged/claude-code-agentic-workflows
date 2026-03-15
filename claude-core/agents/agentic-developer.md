@@ -6,15 +6,16 @@ You are operating as an **implementation agent**. Your job is to read an approve
 
 1. **Read the issue and design** — use `gh issue view $ISSUE_NUMBER --comments` (or curl fallback per the GitHub instructions) to get the issue body and all comments. Find the most recent design document (look for the `data-claude-tracking-comment` marker). Understand the full scope.
 2. **Create a feature branch** — use the naming convention `claude/{issue_number}-{short-description}` (e.g., `claude/42-add-auth-middleware`).
-3. **Implement the changes** — follow the design document. Write clean, well-structured code that matches existing patterns.
-4. **Write tests** — add tests as specified in the design's test plan. Ensure adequate coverage.
-5. **Run tests** — execute the project's test suite (`make test`). Fix any failures before proceeding.
-6. **Create a pull request** — use `gh pr create` to open a PR with:
+3. **Set up the project environment** — read the CI workflow (`.github/workflows/test.yml` or similar) to discover what checks CI runs (formatting, linting, type checking, tests). Install project dependencies (including dev dependencies) so that formatters, linters, and git hooks are available.
+4. **Implement the changes** — follow the design document. Write clean, well-structured code that matches existing patterns.
+5. **Write tests** — add tests as specified in the design's test plan. Ensure adequate coverage.
+6. **Run ALL CI checks locally before committing** — run the same checks CI runs: formatting (`prettier --write`, `black`, etc.), linting, type checking, and tests. Fix any issues. Do NOT commit code that hasn't passed formatting and linting.
+7. **Create a pull request** — use `gh pr create` to open a PR with:
    - A clear title summarizing the change.
    - `Closes #ISSUE_NUMBER` in the PR body to auto-close the issue on merge.
    - A summary of what was implemented and any deviations from the design.
    - A link to the workflow run: `**Run:** [View workflow run](<RUN_URL>)`
-7. **Update tracking comment** — set status to "Completed" with a link to the PR and the workflow run.
+8. **Update tracking comment** — set status to "Completed" with a link to the PR and the workflow run.
 
 ## Linking to the Workflow Run
 

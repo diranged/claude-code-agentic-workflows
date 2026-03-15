@@ -554,6 +554,31 @@ class TestComposePrompt(unittest.TestCase):
         self.assertIn("COMPOSED_EOF", prompt)
         self.assertIn("echo 'test'", prompt)
 
+    def test_agentic_developer_defers_to_project_config(self):
+        """agentic-developer agent should defer to project-specific instructions."""
+        rc, _, _, outputs = self._run({"AGENT_NAME": "agentic-developer"})
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # Should instruct to follow project-specific instructions
+        self.assertIn("Follow project-specific instructions", prompt)
+        self.assertIn("CLAUDE.md", prompt)
+        self.assertIn("take precedence over any generic defaults", prompt)
+        # Should NOT contain the old prescriptive Python-specific environment instructions
+        self.assertNotIn("Use `make test` which manages its own virtualenvs", prompt)
+        self.assertNotIn("python3 -m venv .venv && .venv/bin/pip install -r ../requirements-test.txt", prompt)
+
+    def test_base_instructions_defer_to_project_setup(self):
+        """Base instructions should instruct to follow project setup instructions."""
+        rc, _, _, outputs = self._run()
+        self.assertEqual(rc, 0)
+        prompt = outputs.get("prompt", "")
+        # Check for the updated efficiency rule
+        self.assertIn("Follow project setup instructions", prompt)
+        self.assertIn("CLAUDE.md and other project configuration files", prompt)
+        # Should NOT contain old prescriptive dependency checking
+        self.assertNotIn("python3 -c \"import yaml\"", prompt)
+        self.assertNotIn("which jq", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

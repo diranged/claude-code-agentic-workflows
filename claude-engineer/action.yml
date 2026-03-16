@@ -72,6 +72,28 @@ inputs:
     required: false
     default: "Bash(*),Read,Glob,Grep,WebFetch,WebSearch"
 
+  # Orchestration (forwarded to claude-respond)
+  pre_run:
+    description: "Shell commands to run after checkout but before Claude."
+    required: false
+    default: ""
+  tracking_comment:
+    description: "Create a tracking comment for progress updates (true/false)."
+    required: false
+    default: "true"
+  checkout:
+    description: "Whether to checkout the repository (true/false)."
+    required: false
+    default: "true"
+  checkout_ref:
+    description: "Git ref to checkout."
+    required: false
+    default: ""
+  checkout_fetch_depth:
+    description: "Fetch depth for checkout."
+    required: false
+    default: "0"
+
 outputs:
   execution_file:
     description: "Path to the Claude Code execution output file"
@@ -101,6 +123,11 @@ runs:
         timeout_minutes: ${{ inputs.timeout_minutes }}
         allowed_tools: ${{ inputs.allowed_tools }}
         allowed_bots: ${{ inputs.allowed_bots }}
+        pre_run: ${{ inputs.pre_run }}
+        tracking_comment: ${{ inputs.tracking_comment }}
+        checkout: ${{ inputs.checkout }}
+        checkout_ref: ${{ inputs.checkout_ref }}
+        checkout_fetch_depth: ${{ inputs.checkout_fetch_depth }}
         prompt: |
           Dashboard Configuration:
           - Dashboard label: ${{ inputs.dashboard_label }}

@@ -1,0 +1,144 @@
+name: "Claude Setup"
+description: "Pre-Claude orchestration: trigger validation, tracking comments, checkout, and pre-run setup. Used by claude-respond and other top-level actions."
+branding:
+  icon: "settings"
+  color: "gray-dark"
+
+inputs:
+  # Trigger configuration
+  trigger_phrase:
+    description: "Phrase that triggers Claude in comments."
+    required: false
+    default: "@claude"
+  assignee_trigger:
+    description: "Username that triggers Claude when assigned to an issue."
+    required: false
+  label_trigger:
+    description: "Label prefix that triggers Claude when applied to an issue (e.g., 'claude' matches 'claude:design')."
+    required: false
+
+  # Tracking / UX
+  tracking_comment:
+    description: "Create a tracking comment for progress updates (true/false)."
+    required: false
+    default: "true"
+  reaction_emoji:
+    description: "Emoji to react with on the triggering comment."
+    required: false
+    default: "rocket"
+
+  # Checkout
+  checkout:
+    description: "Whether to checkout the repository (true/false)."
+    required: false
+    default: "true"
+  checkout_ref:
+    description: "Git ref to checkout. Defaults to the event's default ref."
+    required: false
+    default: ""
+  checkout_fetch_depth:
+    description: "Fetch depth for checkout."
+    required: false
+    default: "1"
+
+  # Pre-run
+  pre_run:
+    description: "Shell commands to run after checkout but before Claude. Caller env vars are available."
+    required: false
+    default: ""
+
+  # GitHub auth
+  github_token:
+    description: "GitHub token for API calls (reactions, tracking comments). Falls back to GITHUB_TOKEN."
+    required: false
+  app_id:
+    description: "GitHub App ID for generating an installation token with elevated permissions."
+    required: false
+  app_private_key:
+    description: "GitHub App private key (PEM format) for generating an installation token."
+    required: false
+
+outputs:
+  skip:
+    description: "Whether the run was skipped by trigger validation (true/false)"
+    value: ${{ steps.validate.outputs.skip }}
+  comment_id:
+    description: "Tracking comment ID for progress updates"
+    value: ${{ steps.tracking.outputs.comment_id }}
+  issue_number:
+    description: "Resolved issue/PR number from event context"
+    value: ${{ steps.tracking.outputs.issue_number }}
+  github_token:
+    description: "Resolved GitHub token (App token > explicit > default)"
+    value: ${{ steps.resolve-token.outputs.token }}
+
+runs:
+  using: "composite"
+  steps:
+    # Step 1: Ensure gh CLI is available
+    - name: Install gh CLI
+      uses: dev-hanz-ops/install-gh-cli-action@af38ce09b1ec248aeb08eea2b16bbecea9e059f8 # v0.2.1
+
+    # Step 2: Validate trigger
+    - name: Validate trigger
+      id: validate
+      shell: bash
+      run: ${{ github.action_path }}/scripts/validate_trigger.sh
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        EVENT_ACTION: ${{ github.event.action }}
+        ASSIGNEE_LOGIN: ${{ github.event.assignee.login }}
+        ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
+        LABEL_NAME: ${{ github.event.label.name }}
+        LABEL_TRIGGER: ${{ inputs.label_trigger }}
+        COMMENT_BODY: ${{ github.event.comment.body }}
+        TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
+
+    # Step 3: Generate GitHub App Token (if credentials provided)
+    - name: Generate GitHub App Token
+      id: app-token
+      if: steps.validate.outputs.skip != 'true' && inputs.app_id != '' && inputs.app_private_key != ''
+      uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+      with:
+        app-id: ${{ inputs.app_id }}
+        private-key: ${{ inputs.app_private_key }}
+
+    # Step 4: Resolve GitHub Token
+    - name: Resolve GitHub Token
+      id: resolve-token
+      if: steps.validate.outputs.skip != 'true'
+      shell: bash
+      run: ${{ github.action_path }}/scripts/resolve_token.sh
+      env:
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        EXPLICIT_TOKEN: ${{ inputs.github_token }}
+
+    # Step 5: Setup tracking (reaction + tracking comment)
+    - name: Setup tracking
+      id: tracking
+      if: steps.validate.outputs.skip != 'true'
+      shell: bash
+      run: ${{ github.action_path }}/scripts/setup_tracking.sh
+      env:
+        GH_TOKEN: ${{ steps.resolve-token.outputs.token || github.token }}
+        EVENT_NAME: ${{ github.event_name }}
+        ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        COMMENT_ID: ${{ github.event.comment.id }}
+        REACTION_EMOJI: ${{ inputs.reaction_emoji }}
+        CREATE_TRACKING_COMMENT: ${{ inputs.tracking_comment }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+
+    # Step 6: Checkout
+    - name: Checkout
+      if: steps.validate.outputs.skip != 'true' && inputs.checkout == 'true'
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        ref: ${{ inputs.checkout_ref || '' }}
+        fetch-depth: ${{ inputs.checkout_fetch_depth }}
+
+    # Step 7: Pre-run setup
+    - name: Pre-run setup
+      if: steps.validate.outputs.skip != 'true' && inputs.pre_run != ''
+      shell: bash
+      run: ${{ inputs.pre_run }}

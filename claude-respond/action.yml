@@ -224,4 +224,4 @@ runs:
       with:
         execution_file: ${{ steps.core.outputs.execution_file }}
         session_id: ${{ steps.core.outputs.session_id }}
-        outcome: ${{ steps.core.outcome }}
+        outcome: ${{ steps.core.outcome == 'success' && 'success' || 'failure' }}

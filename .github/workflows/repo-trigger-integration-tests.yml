@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/shared-*.yml"
+      - "claude-setup/**"
       - "claude-core/**"
       - "claude-respond/**"
       - "claude-engineer/**"

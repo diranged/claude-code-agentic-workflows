@@ -24,6 +24,7 @@ jobs:
             refactor
             ci
           scopes: |
+            claude-setup
             claude-core
             claude-respond
             claude-engineer

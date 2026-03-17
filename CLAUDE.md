@@ -312,5 +312,5 @@ Engineer agents operate autonomously with dashboard management:
 - `tests/` — Comprehensive test suite covering all actions
 
 ### Documentation
-- `docs/plan.md` — Comprehensive project plan and architecture decisions
 - `README.md` — User-facing documentation and quick start guide
+- `docs/testing-rubric.md` — Manual test scenarios and evaluation criteria

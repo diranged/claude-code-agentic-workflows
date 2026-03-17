@@ -101,8 +101,8 @@ git push origin integ-testing --force
 ## One-Time Setup (already done)
 
 The integration test repo's caller workflows on `main` use `@integ-testing`:
-- `.github/workflows/claude-responder.yml` — `uses: .../shared-claude-responder.yml@integ-testing`
-- `.github/workflows/claude-engineers.yml` — `uses: .../shared-claude-engineers.yml@integ-testing`
+- `.github/workflows/claude-responder.yml` — `uses: .../claude-respond@integ-testing`
+- `.github/workflows/claude-engineers.yml` — `uses: .../claude-respond@integ-testing` (with `label_trigger: 'claude'`)
 - `.github/workflows/claude-engineer-managers.yml` — `uses: .../claude-engineer@integ-testing`
 
 The `integ-testing` tag on the main repo normally points to `main`. It only diverges during active testing.

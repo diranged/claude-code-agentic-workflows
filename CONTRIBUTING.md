@@ -22,12 +22,13 @@ cd claude-code-agentic-workflows
 
 ### Project Structure
 
-This repository contains 5 composite actions:
+This repository contains 6 composite actions:
 
+- **`claude-setup/`** — Pre-Claude orchestration (trigger validation, tracking comments, checkout, pre-run setup)
 - **`claude-core/`** — Foundation action handling auth, argument composition, prompt composition, and Claude invocation
-- **`claude-respond/`** — Interactive assistant triggered by @claude mentions (wraps claude-core + claude-report)
-- **`claude-engineer/`** — Persistent autonomous engineer agents with dashboard management
-- **`claude-agent/`** — Security-focused action with security-auditor agent
+- **`claude-respond/`** — Interactive assistant: orchestrates setup → intent detection → core → report
+- **`claude-engineer/`** — Persistent autonomous engineer agents with dashboard management (wraps claude-respond)
+- **`claude-agent/`** — Scheduled autonomous agent for proactive scanning and issue creation (wraps claude-respond)
 - **`claude-report/`** — Execution summary generator and artifact uploader
 
 Each action has its own `action.yml` specification and may include:
@@ -60,11 +61,13 @@ python3 -m venv .venv
 ```
 
 Individual action tests:
-- `claude-respond/tests/` — Input parity validation
-- `claude-agent/tests/` — Input parity validation
-- `claude-core/` — No dedicated tests (core logic tested via dependent actions)
-- `claude-engineer/` — No test infrastructure yet (known gap)
-- `claude-report/` — No dedicated tests
+- `claude-setup/tests/` — Trigger validation, tracking, token resolution scripts
+- `claude-core/tests/` — Input validation, arg building, prompt composition, intent detection
+- `claude-respond/tests/` — Action structure validation, detect_intent script
+- `claude-engineer/tests/` — Action structure validation, input forwarding
+- `claude-agent/tests/` — Action structure, agent configuration
+- `claude-report/tests/` — Report generation
+- `tests/` — Workflow validation, repo-level utilities
 
 ## Conventions
 
@@ -154,7 +157,7 @@ This is a security best practice. When updating upstream dependencies:
 
 ### Versioning Strategy
 
-- **Monolithic versioning**: All 5 actions are versioned together
+- **Monolithic versioning**: All 6 actions are versioned together
 - **Semver tags**: `v0.x.y` format using annotated tags
 - **Floating major tag**: `v0` points to latest `v0.x.y` release
 
@@ -168,12 +171,11 @@ When creating a new release:
 ```
 
 #### 2. Update Internal Action References
-Update these 4 files to reference the new version tag:
+Update these files to reference the new version tag (search for `@integ-testing`):
 
-- `claude-respond/action.yml:124` — `claude-core@v0.x.y`
-- `claude-respond/action.yml:156` — `claude-report@v0.x.y`
-- `claude-engineer/action.yml:82` — `claude-respond@v0.x.y`
-- `claude-agent/action.yml:82` — `claude-respond@v0.x.y`
+- `claude-respond/action.yml` — `claude-setup@v0.x.y`, `claude-core@v0.x.y`, `claude-report@v0.x.y`
+- `claude-engineer/action.yml` — `claude-respond@v0.x.y`
+- `claude-agent/action.yml` — `claude-respond@v0.x.y`
 
 #### 3. Update Documentation References
 - `README.md` — Update usage examples (4 references)
@@ -204,9 +206,9 @@ uses: diranged/claude-code-agentic-workflows/claude-respond@v0
 ```
 
 ### Post-Release
-After releasing, update internal references back to `@main` for development:
-- Revert the 4 internal action.yml references from `@v0.x.y` back to `@main`
-- This allows development branches to use the current development code
+After releasing, update internal references back to `@integ-testing` for development:
+- Revert the 5 internal action.yml references from `@v0.x.y` back to `@integ-testing`
+- The `integ-testing` tag normally points at `main` and is used for integration testing
 
 ## Getting Help
 

@@ -20,7 +20,7 @@ Each scenario specifies the trigger, expected behavior, and pass/fail criteria.
 > and exits with code 0. Include a basic test.
 
 **Expected behavior:**
-1. ✅ Workflow triggers (`repo-claude-responder.yml` → `shared-claude-responder.yml` → `agentic-designer`)
+1. ✅ Workflow triggers (`repo-claude-responder.yml` → `./claude-respond` → `agentic-designer`)
 2. ✅ 🚀 reaction appears on the `@claude` comment
 3. ✅ Tracking comment created with "Initializing" status and run link
 4. ✅ Claude runs the designer agent (read-only, no code changes)

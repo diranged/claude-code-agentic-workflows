@@ -4,10 +4,11 @@
 
 ## Overview
 
-This repository provides five reusable GitHub Actions composite actions that enable powerful Claude-powered automation in your workflows. The project creates a complete ecosystem for AI-driven development assistance, from interactive issue responses to autonomous engineering tasks.
+This repository provides six reusable GitHub Actions composite actions that enable powerful Claude-powered automation in your workflows. The project creates a complete ecosystem for AI-driven development assistance, from interactive issue responses to autonomous engineering tasks.
 
 The core actions include:
-- **claude-respond** — Interactive assistant triggered by @claude mentions
+- **claude-setup** — Pre-Claude orchestration (trigger validation, tracking comments, checkout, pre-run)
+- **claude-respond** — Interactive assistant: orchestrates setup → intent detection → Claude execution → reporting
 - **claude-core** — Low-level execution wrapper for auth and prompt composition
 - **claude-engineer** — Persistent autonomous engineer with dashboard management
 - **claude-agent** — Scheduled autonomous agent for proactive scanning and issue creation
@@ -25,7 +26,7 @@ This project uses semantic versioning with a `v0` pre-release strategy:
 - **`@v0.x.y`** — Pin to an exact version for reproducible builds
 - **`@main`** — Development branch (not recommended for production use)
 
-The project is currently pre-1.0, meaning breaking changes may occur between minor versions. All actions (claude-core, claude-respond, claude-engineer, claude-agent, claude-report) are versioned together as a monolithic release.
+The project is currently pre-1.0, meaning breaking changes may occur between minor versions. All actions (claude-setup, claude-core, claude-respond, claude-engineer, claude-agent, claude-report) are versioned together as a monolithic release.
 
 For release process and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

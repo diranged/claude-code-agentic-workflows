@@ -54,6 +54,13 @@ class TestRepoClaudeResponder(unittest.TestCase):
         job = self.wf["jobs"]["respond"]
         self.assertIn("runs-on", job)
 
+    def test_has_checkout_before_action(self):
+        """Local ./ action references require the repo to be checked out first."""
+        job = self.wf["jobs"]["respond"]
+        steps = job.get("steps", [])
+        checkout_steps = [s for s in steps if "checkout" in s.get("uses", "")]
+        self.assertEqual(len(checkout_steps), 1)
+
     def test_no_secrets_block(self):
         """Composite action pattern doesn't need a secrets block."""
         for job_name, job in self.wf["jobs"].items():
@@ -94,6 +101,13 @@ class TestRepoClaudeEngineers(unittest.TestCase):
         if isinstance(triggers, dict):
             self.assertNotIn("workflow_run", triggers)
 
+    def test_has_checkout_before_action(self):
+        """Local ./ action references require the repo to be checked out first."""
+        job = self.wf["jobs"]["engineers"]
+        steps = job.get("steps", [])
+        checkout_steps = [s for s in steps if "checkout" in s.get("uses", "")]
+        self.assertEqual(len(checkout_steps), 1)
+
     def test_engineers_job_uses_claude_respond_action(self):
         job = self.wf["jobs"]["engineers"]
         steps = job.get("steps", [])
@@ -132,14 +146,14 @@ class TestRepoEngineerManagers(unittest.TestCase):
                 f"Job '{job_name}' should have exactly one claude-engineer step",
             )
 
-    def test_no_explicit_checkout_steps(self):
-        """claude-engineer handles checkout via claude-respond→claude-setup."""
+    def test_has_checkout_before_action(self):
+        """Each job must checkout the repo before using local ./claude-engineer action."""
         for job_name, job in self.wf["jobs"].items():
             steps = job.get("steps", [])
             checkout_steps = [s for s in steps if "checkout" in s.get("uses", "")]
             self.assertEqual(
-                len(checkout_steps), 0,
-                f"Job '{job_name}' has explicit checkout — claude-engineer handles this",
+                len(checkout_steps), 1,
+                f"Job '{job_name}' must have a checkout step for local action reference",
             )
 
     def test_each_job_has_unique_dashboard_label(self):

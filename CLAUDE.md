@@ -185,6 +185,35 @@ When `compose_prompt: true`, the system builds sophisticated prompts by combinin
 
 This modular approach enables consistent behavior across agents while allowing specialization.
 
+## Integration Testing
+
+Integration tests live in `diranged/claude-workflows-integration-tests`. That repo acts as a real consumer — its caller workflows permanently reference `@integ-testing` (a movable tag on this repo).
+
+### How it works
+
+1. The `integ-testing` tag normally points at `main`
+2. To test changes: `git tag -f integ-testing HEAD && git push origin integ-testing --force`
+3. The integration test repo's workflows now resolve your branch's code
+4. Trigger tests: `gh workflow run integration-tests.yml --repo diranged/claude-workflows-integration-tests -f tests="mention"`
+5. When done: `git tag -f integ-testing main && git push origin integ-testing --force`
+
+### Nested action references
+
+All `uses:` references between actions (e.g., `claude-respond` calling `claude-setup`) reference `@integ-testing`. This ensures the entire action chain resolves to the same version. When the `integ-testing` tag points at `main`, this is equivalent to `@main`.
+
+### Test catalog
+
+| Selector | What it tests |
+|----------|---------------|
+| `mention` | @claude comment triggers response (~5 min) |
+| `design` | claude:design label triggers designer agent (~10 min) |
+| `auto-advance` | Full design→review→implement pipeline (~60 min) |
+| `formatting` | Claude PRs pass prettier CI (~60 min) |
+| `engineer` | workflow_dispatch triggers dashboard creation (~30 min) |
+| `all` | Full suite |
+
+Use `/integration-test` in Claude Code for the complete workflow reference.
+
 ## Development Workflow
 
 ### Two-Phase Design→Implement Pattern

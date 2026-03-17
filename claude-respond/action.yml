@@ -1,5 +1,5 @@
 name: "Claude Respond"
-description: "Interactive Claude assistant triggered by @claude mentions in issues and PRs. Composes claude-core and claude-report for auth, execution, and reporting."
+description: "Interactive Claude assistant for issues and PRs. Handles trigger validation, checkout, tracking, label routing, Claude execution, and reporting."
 branding:
   icon: "message-circle"
   color: "orange"
@@ -104,6 +104,36 @@ inputs:
     required: false
     default: "false"
 
+  # --- Orchestration inputs (not in claude-core) ---
+  pre_run:
+    description: "Shell commands to run after checkout but before Claude. Caller env vars are available."
+    required: false
+    default: ""
+  tracking_comment:
+    description: "Create a tracking comment for progress updates (true/false)."
+    required: false
+    default: "true"
+  reaction_emoji:
+    description: "Emoji to react with on the triggering comment."
+    required: false
+    default: "rocket"
+  checkout:
+    description: "Whether to checkout the repository (true/false)."
+    required: false
+    default: "true"
+  checkout_ref:
+    description: "Git ref to checkout. Defaults to the event's default ref."
+    required: false
+    default: ""
+  checkout_fetch_depth:
+    description: "Fetch depth for checkout."
+    required: false
+    default: "1"
+  default_agent:
+    description: "Default agent for label routing when label doesn't match a known pipeline stage."
+    required: false
+    default: "agentic-designer"
+
 outputs:
   execution_file:
     description: "Path to the Claude Code execution output file"
@@ -114,25 +144,62 @@ outputs:
   session_id:
     description: "Claude Code session ID for resuming conversations"
     value: ${{ steps.core.outputs.session_id }}
+  skipped:
+    description: "Whether the run was skipped by trigger validation (true/false)"
+    value: ${{ steps.setup.outputs.skip }}
 
 runs:
   using: "composite"
   steps:
-    # Step 1: Run Claude via claude-core
+    # Step 1: Pre-Claude orchestration (trigger validation, tracking, checkout, pre_run)
+    - name: Setup
+      id: setup
+      uses: diranged/claude-code-agentic-workflows/claude-setup@integ-testing
+      with:
+        trigger_phrase: ${{ inputs.trigger_phrase }}
+        assignee_trigger: ${{ inputs.assignee_trigger }}
+        label_trigger: ${{ inputs.label_trigger }}
+        tracking_comment: ${{ inputs.tracking_comment }}
+        reaction_emoji: ${{ inputs.reaction_emoji }}
+        checkout: ${{ inputs.checkout }}
+        checkout_ref: ${{ inputs.checkout_ref }}
+        checkout_fetch_depth: ${{ inputs.checkout_fetch_depth }}
+        pre_run: ${{ inputs.pre_run }}
+        github_token: ${{ inputs.github_token }}
+        app_id: ${{ inputs.app_id }}
+        app_private_key: ${{ inputs.app_private_key }}
+
+    # Step 2: Route label to agent/model (only for label-triggered events)
+    - name: Detect intent
+      id: intent
+      if: >-
+        steps.setup.outputs.skip != 'true'
+        && inputs.label_trigger != ''
+        && github.event_name == 'issues'
+        && github.event.action == 'labeled'
+      shell: bash
+      run: ${{ github.action_path }}/scripts/detect_intent.sh
+      env:
+        LABEL_NAME: ${{ github.event.label.name }}
+        DEFAULT_AGENT: ${{ inputs.default_agent || inputs.agent_name }}
+        DEFAULT_MODEL: ${{ inputs.model }}
+
+    # Step 3: Run Claude via claude-core
     - name: Run Claude Core
       id: core
-      uses: diranged/claude-code-agentic-workflows/claude-core@main
+      if: steps.setup.outputs.skip != 'true' && steps.intent.outputs.skip != 'true'
+      uses: diranged/claude-code-agentic-workflows/claude-core@integ-testing
       with:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
-        github_token: ${{ inputs.github_token }}
+        github_token: ${{ steps.setup.outputs.github_token || inputs.github_token }}
         app_id: ${{ inputs.app_id }}
         app_private_key: ${{ inputs.app_private_key }}
         allowed_bots: ${{ inputs.allowed_bots }}
         trigger_phrase: ${{ inputs.trigger_phrase }}
         assignee_trigger: ${{ inputs.assignee_trigger }}
         label_trigger: ${{ inputs.label_trigger }}
-        model: ${{ inputs.model }}
+        model: ${{ steps.intent.outputs.model || inputs.model }}
         max_turns: ${{ inputs.max_turns }}
         timeout_minutes: ${{ inputs.timeout_minutes }}
         allowed_tools: ${{ inputs.allowed_tools }}
@@ -141,20 +208,20 @@ runs:
         additional_permissions: ${{ inputs.additional_permissions }}
         settings: ${{ inputs.settings }}
         prompt: ${{ inputs.prompt }}
-        agent_name: ${{ inputs.agent_name }}
+        agent_name: ${{ steps.intent.outputs.agent || inputs.agent_name }}
         extra_instructions_path: ${{ inputs.extra_instructions_path }}
         extra_agents_path: ${{ inputs.extra_agents_path }}
         compose_prompt: ${{ inputs.compose_prompt }}
-        issue_comment_id: ${{ inputs.issue_comment_id }}
+        issue_comment_id: ${{ steps.setup.outputs.comment_id || inputs.issue_comment_id }}
         notify_owners: ${{ inputs.notify_owners }}
         display_report: ${{ inputs.display_report }}
         dry_run: ${{ inputs.dry_run }}
 
-    # Step 2: Generate report and upload artifact
+    # Step 4: Generate report and upload artifact
     - name: Generate Report
-      if: always()
-      uses: diranged/claude-code-agentic-workflows/claude-report@main
+      if: always() && steps.setup.outputs.skip != 'true' && steps.intent.outputs.skip != 'true'
+      uses: diranged/claude-code-agentic-workflows/claude-report@integ-testing
       with:
         execution_file: ${{ steps.core.outputs.execution_file }}
         session_id: ${{ steps.core.outputs.session_id }}
-        outcome: ${{ steps.core.outcome }}
+        outcome: ${{ steps.core.outcome == 'success' && 'success' || 'failure' }}

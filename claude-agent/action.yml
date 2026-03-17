@@ -66,6 +66,28 @@ inputs:
     description: "Claude Code settings as JSON string or path to settings JSON file."
     required: false
 
+  # Orchestration (forwarded to claude-respond)
+  pre_run:
+    description: "Shell commands to run after checkout but before Claude."
+    required: false
+    default: ""
+  tracking_comment:
+    description: "Create a tracking comment for progress updates (true/false)."
+    required: false
+    default: "true"
+  checkout:
+    description: "Whether to checkout the repository (true/false)."
+    required: false
+    default: "true"
+  checkout_ref:
+    description: "Git ref to checkout."
+    required: false
+    default: ""
+  checkout_fetch_depth:
+    description: "Fetch depth for checkout."
+    required: false
+    default: "1"
+
 outputs:
   execution_file:
     description: "Path to the Claude Code execution output file"
@@ -79,7 +101,7 @@ runs:
   steps:
     - name: Run Agent
       id: respond
-      uses: diranged/claude-code-agentic-workflows/claude-respond@main
+      uses: diranged/claude-code-agentic-workflows/claude-respond@integ-testing
       with:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
@@ -96,6 +118,11 @@ runs:
         disallowed_tools: ${{ inputs.disallowed_tools }}
         claude_args: ${{ inputs.claude_args }}
         settings: ${{ inputs.settings }}
+        pre_run: ${{ inputs.pre_run }}
+        tracking_comment: ${{ inputs.tracking_comment }}
+        checkout: ${{ inputs.checkout }}
+        checkout_ref: ${{ inputs.checkout_ref }}
+        checkout_fetch_depth: ${{ inputs.checkout_fetch_depth }}
         prompt: |
           Agent Configuration:
           - Max issues per run: ${{ inputs.max_issues }}

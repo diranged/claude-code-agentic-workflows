@@ -19,8 +19,6 @@ jobs:
       pull-requests: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
       - name: Run Documentation Engineer
         uses: ./claude-engineer
         with:
@@ -40,8 +38,6 @@ jobs:
       pull-requests: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
       - name: Run Code Janitor
         uses: ./claude-engineer
         with:
@@ -61,8 +57,6 @@ jobs:
       pull-requests: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
       - name: Run Security Engineer
         uses: ./claude-engineer
         with:

@@ -73,6 +73,15 @@ class TestActionYml(unittest.TestCase):
         for inp in advanced_inputs:
             self.assertIn(inp, self.agent["inputs"], f"Missing advanced input: {inp}")
 
+    def test_orchestration_inputs_exist(self):
+        """Orchestration inputs should be present for forwarding to claude-respond."""
+        orchestration_inputs = [
+            "pre_run", "tracking_comment", "checkout",
+            "checkout_ref", "checkout_fetch_depth",
+        ]
+        for inp in orchestration_inputs:
+            self.assertIn(inp, self.agent["inputs"], f"Missing orchestration input: {inp}")
+
     # --- Step structure ---
 
     def test_has_one_step(self):
@@ -143,6 +152,22 @@ class TestActionYml(unittest.TestCase):
                 with_block[inp],
                 f"${{{{ inputs.{inp} }}}}",
                 f"Config input '{inp}' not properly referenced"
+            )
+
+    def test_orchestration_inputs_forwarded_to_step(self):
+        """Orchestration inputs should be forwarded to the respond step."""
+        step = self.agent["runs"]["steps"][0]
+        with_block = step.get("with", {})
+        orchestration_inputs = [
+            "pre_run", "tracking_comment", "checkout",
+            "checkout_ref", "checkout_fetch_depth",
+        ]
+        for inp in orchestration_inputs:
+            self.assertIn(inp, with_block, f"Orchestration input '{inp}' not forwarded")
+            self.assertEqual(
+                with_block[inp],
+                f"${{{{ inputs.{inp} }}}}",
+                f"Orchestration input '{inp}' not properly referenced"
             )
 
     # --- Prompt template ---

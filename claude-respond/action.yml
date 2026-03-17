@@ -154,7 +154,7 @@ runs:
     # Step 1: Pre-Claude orchestration (trigger validation, tracking, checkout, pre_run)
     - name: Setup
       id: setup
-      uses: diranged/claude-code-agentic-workflows/claude-setup@main
+      uses: diranged/claude-code-agentic-workflows/claude-setup@integ-testing
       with:
         trigger_phrase: ${{ inputs.trigger_phrase }}
         assignee_trigger: ${{ inputs.assignee_trigger }}
@@ -188,7 +188,7 @@ runs:
     - name: Run Claude Core
       id: core
       if: steps.setup.outputs.skip != 'true' && steps.intent.outputs.skip != 'true'
-      uses: diranged/claude-code-agentic-workflows/claude-core@main
+      uses: diranged/claude-code-agentic-workflows/claude-core@integ-testing
       with:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
@@ -220,7 +220,7 @@ runs:
     # Step 4: Generate report and upload artifact
     - name: Generate Report
       if: always() && steps.setup.outputs.skip != 'true' && steps.intent.outputs.skip != 'true'
-      uses: diranged/claude-code-agentic-workflows/claude-report@main
+      uses: diranged/claude-code-agentic-workflows/claude-report@integ-testing
       with:
         execution_file: ${{ steps.core.outputs.execution_file }}
         session_id: ${{ steps.core.outputs.session_id }}

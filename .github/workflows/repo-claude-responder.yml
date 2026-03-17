@@ -36,4 +36,5 @@ jobs:
           allowed_bots: "claude[bot]"
           notify_owners: "diranged"
           compose_prompt: "true"
+          agent_name: "auto"
           allowed_tools: "Bash(*),Read,Glob,Grep,Edit,Write,WebFetch,WebSearch"

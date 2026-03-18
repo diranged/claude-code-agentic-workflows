@@ -12,6 +12,8 @@ class TestPostReviewChecklist(unittest.TestCase):
     def _run(self, pr_number=None, checklist_file=None, mock_gh=None, setup_custom_checklist=False):
         """Run the review checklist script with optional mocking."""
         env = dict(os.environ)
+        # Remove GITHUB_WORKSPACE so the script treats the test's tmpdir as workspace root
+        env.pop("GITHUB_WORKSPACE", None)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Change to temp directory for the test
@@ -111,21 +113,32 @@ elif [[ "$1" == "pr" && "$2" == "comment" ]]; then
     echo "Posted with custom file: $4"
 fi
 '''
-
+        env = dict(os.environ)
         with tempfile.TemporaryDirectory() as tmpdir:
             custom_file = os.path.join(tmpdir, "my-checklist.md")
             with open(custom_file, "w") as f:
                 f.write("## My Custom Checklist\n- [ ] Special requirement\n")
 
-            # Change to temp directory for the test
+            # Mock gh command
+            gh_script = os.path.join(tmpdir, "gh")
+            with open(gh_script, "w") as f:
+                f.write(f"#!/bin/bash\n{mock_gh}\n")
+            os.chmod(gh_script, 0o755)
+
+            env["PATH"] = f"{tmpdir}:{env['PATH']}"
+            env["PR_NUMBER"] = "123"
+            env["CHECKLIST_FILE"] = custom_file
+            # Set GITHUB_WORKSPACE to tmpdir so absolute path to custom_file is within workspace
+            env["GITHUB_WORKSPACE"] = tmpdir
+
             original_cwd = os.getcwd()
             os.chdir(tmpdir)
-
             try:
-                result = self._run(
-                    pr_number=123,
-                    checklist_file=custom_file,
-                    mock_gh=mock_gh
+                result = subprocess.run(
+                    ["bash", SCRIPT],
+                    capture_output=True,
+                    text=True,
+                    env=env,
                 )
                 self.assertEqual(result.returncode, 0)
                 self.assertIn(f"Using custom checklist from {custom_file}", result.stdout)

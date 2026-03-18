@@ -6,7 +6,7 @@ description: "Run integration tests against claude-workflows-integration-tests. 
 
 You manage integration testing between two repositories:
 
-- **Main repo** (local): `diranged/claude-code-agent-workflows` at `/Users/diranged/git/diranged/claude-code-agent-workflows`
+- **Main repo** (local): `diranged/claude-code-agentic-workflows` at `/Users/diranged/git/diranged/claude-code-agentic-workflows`
 - **Integration test repo** (remote only): `diranged/claude-workflows-integration-tests`
 
 Never clone the integration test repo locally. All operations on it use `gh` CLI.

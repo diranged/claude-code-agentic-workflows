@@ -52,7 +52,9 @@ jobs:
         id: detect
         env:
           COMMENT_BODY: ""  # Empty for label-triggered events
-          TRIGGER_LABEL: ${{ github.event.label.name }}
+          LABEL_NAME: ${{ github.event.label.name }}
+          DEFAULT_AGENT: agentic-designer
+          DEFAULT_MODEL: claude-opus-4-20250514
         run: |
           echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
           echo "should_run=true" >> "$GITHUB_OUTPUT"
@@ -61,7 +63,7 @@ jobs:
           # claude:design    → agentic-designer  (creates implementation plans)
           # claude:review    → architect         (reviews designs and architecture)
           # claude:implement → agentic-developer (implements approved designs)
-          bash claude-core/scripts/detect_intent.sh
+          bash claude-respond/scripts/detect_intent.sh
         shell: bash
 
   # Job 2: Set up pipeline execution (create tracking comment)
@@ -176,6 +178,6 @@ jobs:
 # - claude:queued    → Applied when implementation slots are full during auto-advance
 #
 # Customization:
-# - Adjust model selection in claude-core/scripts/detect_intent.sh for your needs
+# - Adjust model selection in claude-respond/scripts/detect_intent.sh for your needs
 # - Add custom labels/agents by extending the detection script
 # - Consider different permission sets per stage for tighter security

@@ -52,12 +52,14 @@ jobs:
         id: detect
         env:
           COMMENT_BODY: ${{ github.event.comment.body || '' }}
-          TRIGGER_LABEL: ${{ github.event.label.name || '' }}
+          LABEL_NAME: ${{ github.event.label.name || '' }}
+          DEFAULT_AGENT: agentic-designer
+          DEFAULT_MODEL: claude-opus-4-20250514
         run: |
           echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
           echo "should_run=true" >> "$GITHUB_OUTPUT"
           # This script analyzes the comment/label to choose the appropriate agent
-          bash claude-core/scripts/detect_intent.sh
+          bash claude-respond/scripts/detect_intent.sh
         shell: bash
 
   # Job 2: Set up the interaction (react to comment, create tracking comment)

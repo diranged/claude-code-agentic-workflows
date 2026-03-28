@@ -27,6 +27,12 @@ if [[ -z "$PR_NUMBER" ]]; then
     exit 1
 fi
 
+# Validate PR_NUMBER is a positive integer (prevent command injection)
+if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+    echo "Error: PR_NUMBER must be a positive integer (got: '$PR_NUMBER')" >&2
+    exit 1
+fi
+
 # Default checklist content
 DEFAULT_CHECKLIST="## Review Checklist
 - [ ] Code follows existing patterns and conventions

@@ -178,6 +178,30 @@ fi
         )
         # Note: This test may fail without proper gh mock setup, but validates argument parsing
 
+    def test_command_substitution_rejection(self):
+        """Test that command substitution in PR_NUMBER is rejected."""
+        result = self._run(pr_number="$(echo pwned)")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be a positive integer", result.stderr)
+
+    def test_backtick_injection_rejection(self):
+        """Test that backtick command injection in PR_NUMBER is rejected."""
+        result = self._run(pr_number="`echo pwned`")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be a positive integer", result.stderr)
+
+    def test_non_numeric_string_rejection(self):
+        """Test that non-numeric strings in PR_NUMBER are rejected."""
+        result = self._run(pr_number="abc")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be a positive integer", result.stderr)
+
+    def test_negative_number_rejection(self):
+        """Test that negative numbers in PR_NUMBER are rejected."""
+        result = self._run(pr_number="-1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be a positive integer", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,6 +30,12 @@ if [[ -z "$PR_NUMBER" ]]; then
     exit 1
 fi
 
+# Validate PR_NUMBER is a positive integer (prevent command injection)
+if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+    echo "Error: PR_NUMBER must be a positive integer (got: '$PR_NUMBER')" >&2
+    exit 1
+fi
+
 # Get line counts - use env vars if set (for testing), otherwise query GitHub
 if [[ -n "${PR_ADDITIONS:-}" && -n "${PR_DELETIONS:-}" ]]; then
     echo "Using provided line counts: +$PR_ADDITIONS -$PR_DELETIONS"
